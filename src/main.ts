@@ -18,7 +18,7 @@ async function bootstrap() {
     .setTitle('Topos Executor Service')
     .setDescription('The Topos Executor Service API description')
     .setVersion('1.0')
-    .addTag('topos')
+    // .addTag('topos')
     .addBearerAuth()
     .build()
   const document = SwaggerModule.createDocument(app, config)

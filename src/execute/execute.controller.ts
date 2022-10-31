@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common'
-import { ApiBearerAuth, ApiParam } from '@nestjs/swagger'
+import { ApiBearerAuth, ApiParam, ApiTags } from '@nestjs/swagger'
 
 import { ExecuteDto } from './execute.dto'
 import { ExecuteService } from './execute.service'
@@ -9,6 +9,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard'
 export class ExecuteController {
   constructor(private executeService: ExecuteService) {}
 
+  @ApiTags('execute')
   @Post('execute')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
@@ -16,6 +17,7 @@ export class ExecuteController {
     return this.executeService.execute(executeDto)
   }
 
+  @ApiTags('job')
   @Get('job/:jobId')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
