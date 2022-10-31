@@ -1,5 +1,5 @@
 import { InjectQueue } from '@nestjs/bull'
-import { Injectable } from '@nestjs/common'
+import { Injectable, Logger } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { Queue } from 'bull'
 import { ethers } from 'ethers'
@@ -7,7 +7,7 @@ import { ToposExecutorContract } from 'src/abi/ToposExecutorContract'
 import { ExecuteDto } from 'src/execute/execute.dto'
 import {
   CONTRACT_ERRORS,
-  JOB_ERRORS,
+  QUEUE_ERRORS,
   PROVIDER_ERRORS,
   WALLET_ERRORS,
 } from 'src/execute/execute.errors'
@@ -15,11 +15,14 @@ import { ExecuteData } from './execute.processor'
 
 @Injectable()
 export class ExecuteService {
+  private readonly logger = new Logger(ExecuteService.name)
+
   constructor(
     private configService: ConfigService,
     @InjectQueue('execute') private readonly executionQueue: Queue
   ) {
     this._verifyPrivateKey()
+    this._verifyRedisAvailability()
   }
 
   async execute(executeDto: ExecuteDto) {
@@ -44,9 +47,9 @@ export class ExecuteService {
       inclusionProof,
     }
 
-    const executionJob = await this.executionQueue.add('execute', executeData)
+    const { id, timestamp, ...rest } = await this._addExecutionJob(executeData)
 
-    return executionJob.id
+    return { id, timestamp }
   }
 
   async getJobById(jobId: string) {
@@ -58,7 +61,7 @@ export class ExecuteService {
       )
 
       if (!failedJob) {
-        throw new Error(JOB_ERRORS.NOT_FOUND)
+        throw new Error(QUEUE_ERRORS.JOB_NOT_FOUND)
       }
 
       return failedJob
@@ -98,14 +101,6 @@ export class ExecuteService {
     }
   }
 
-  private _verifyPrivateKey() {
-    try {
-      this._createWallet(null)
-    } catch (error) {
-      throw new Error(WALLET_ERRORS.INVALID_PRIVATE_KEY)
-    }
-  }
-
   private async _getContract(
     provider: ethers.providers.JsonRpcProvider,
     contractAddress: string,
@@ -123,5 +118,45 @@ export class ExecuteService {
     } catch (error) {
       throw new Error(CONTRACT_ERRORS.INVALID_CONTRACT)
     }
+  }
+
+  private async _addExecutionJob(executeData: ExecuteData) {
+    try {
+      return this.executionQueue.add('execute', executeData)
+    } catch (error) {
+      console.log(error)
+    }
+  }
+
+  private _verifyPrivateKey() {
+    try {
+      this._createWallet(null)
+    } catch (error) {
+      throw new Error(WALLET_ERRORS.INVALID_PRIVATE_KEY)
+    }
+  }
+
+  private _verifyRedisAvailability(retries = 3) {
+    return new Promise((resolve, reject) => {
+      const redisStatus = this.executionQueue.client.status
+      this.logger.debug(`Redis connection status: ${redisStatus}`)
+
+      if (
+        (redisStatus === 'reconnecting' || redisStatus === 'connecting') &&
+        retries > 0
+      ) {
+        this.logger.debug(
+          `Retrying Redis connection establishment (${retries})...`
+        )
+        setTimeout(() => {
+          this._verifyRedisAvailability(--retries)
+          resolve(null)
+        }, 1000)
+      } else {
+        if (redisStatus !== 'ready') {
+          reject(new Error(QUEUE_ERRORS.REDIS_NOT_AVAILABLE))
+        }
+      }
+    })
   }
 }

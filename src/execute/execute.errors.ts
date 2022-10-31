@@ -10,6 +10,7 @@ export enum CONTRACT_ERRORS {
   INVALID_CONTRACT = 'Contract // Invalid contract!',
 }
 
-export enum JOB_ERRORS {
-  NOT_FOUND = 'Job // A job with the provided id could not be found!',
+export enum QUEUE_ERRORS {
+  JOB_NOT_FOUND = 'Job // A job with the provided id could not be found!',
+  REDIS_NOT_AVAILABLE = 'Redis // A job with the provided id could not be found!',
 }
