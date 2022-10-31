@@ -12,7 +12,7 @@ async function bootstrap() {
 
   const httpAdapter = app.get(HttpAdapterHost)
   // app.useGlobalFilters(new HttpExceptionFilter())
-  app.useGlobalFilters(new AllExceptionsFilter(httpAdapter))
+  // app.useGlobalFilters(new AllExceptionsFilter(httpAdapter))
 
   const config = new DocumentBuilder()
     .setTitle('Topos Executor Service')
