@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common'
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  UseGuards,
+} from '@nestjs/common'
 import { ApiBearerAuth, ApiParam, ApiTags } from '@nestjs/swagger'
 
 import { ExecuteDto } from './execute.dto'
@@ -14,7 +22,9 @@ export class ExecuteController {
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   async execute(@Body() executeDto: ExecuteDto) {
-    return this.executeService.execute(executeDto)
+    return this.executeService.execute(executeDto).catch((error) => {
+      throw new BadRequestException(error.message)
+    })
   }
 
   @ApiTags('job')
