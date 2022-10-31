@@ -3,7 +3,7 @@ import { ConfigModule } from '@nestjs/config'
 import { BullModule } from '@nestjs/bull'
 
 import { AuthModule } from './auth/auth.module'
-import { ExecuteModule } from './execute/execute.module'
+import { ExecuteModuleV1 } from './execute/execute.module'
 
 @Module({
   imports: [
@@ -15,7 +15,7 @@ import { ExecuteModule } from './execute/execute.module'
         port: 6379,
       },
     }),
-    ExecuteModule,
+    ExecuteModuleV1,
   ],
 })
 export class AppModule {}

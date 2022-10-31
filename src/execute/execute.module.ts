@@ -11,4 +11,4 @@ import { ExecuteServiceV1 } from './execute.service'
   imports: [ConfigModule, BullModule.registerQueue({ name: 'execute' })],
   providers: [ExecutionProcessorV1, ExecuteServiceV1],
 })
-export class ExecuteModule {}
+export class ExecuteModuleV1 {}
