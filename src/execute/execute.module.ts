@@ -2,13 +2,13 @@ import { BullModule } from '@nestjs/bull'
 import { Module } from '@nestjs/common'
 import { ConfigModule } from '@nestjs/config'
 
-import { ExecuteController } from './execute.controller'
-import { ExecutionProcessor } from './execute.processor'
-import { ExecuteService } from './execute.service'
+import { ExecuteControllerV1 } from './execute.controller'
+import { ExecutionProcessorV1 } from './execute.processor'
+import { ExecuteServiceV1 } from './execute.service'
 
 @Module({
-  controllers: [ExecuteController],
+  controllers: [ExecuteControllerV1],
   imports: [ConfigModule, BullModule.registerQueue({ name: 'execute' })],
-  providers: [ExecutionProcessor, ExecuteService],
+  providers: [ExecutionProcessorV1, ExecuteServiceV1],
 })
 export class ExecuteModule {}

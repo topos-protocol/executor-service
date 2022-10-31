@@ -14,8 +14,8 @@ import {
 import { ExecuteData } from './execute.processor'
 
 @Injectable()
-export class ExecuteService {
-  private readonly logger = new Logger(ExecuteService.name)
+export class ExecuteServiceV1 {
+  private readonly logger = new Logger(ExecuteServiceV1.name)
 
   constructor(
     private configService: ConfigService,
@@ -49,7 +49,7 @@ export class ExecuteService {
 
     const { id, timestamp, ...rest } = await this._addExecutionJob(executeData)
 
-    return { id, timestamp }
+    return { job: { id, timestamp } }
   }
 
   async getJobById(jobId: string) {

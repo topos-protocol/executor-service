@@ -10,18 +10,18 @@ import {
 import { ApiBearerAuth, ApiParam, ApiTags } from '@nestjs/swagger'
 
 import { ExecuteDto } from './execute.dto'
-import { ExecuteService } from './execute.service'
+import { ExecuteServiceV1 } from './execute.service'
 import { JwtAuthGuard } from '../auth/jwt-auth.guard'
 
-@Controller()
-export class ExecuteController {
-  constructor(private executeService: ExecuteService) {}
+@Controller({ version: '1' })
+export class ExecuteControllerV1 {
+  constructor(private executeService: ExecuteServiceV1) {}
 
   @ApiTags('execute')
   @Post('execute')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
-  async execute(@Body() executeDto: ExecuteDto) {
+  async executeV1(@Body() executeDto: ExecuteDto) {
     return this.executeService.execute(executeDto).catch((error) => {
       throw new BadRequestException(error.message)
     })

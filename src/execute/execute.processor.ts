@@ -23,8 +23,8 @@ export interface ExecuteData {
 }
 
 @Processor('execute')
-export class ExecutionProcessor {
-  private readonly logger = new Logger(ExecutionProcessor.name)
+export class ExecutionProcessorV1 {
+  private readonly logger = new Logger(ExecutionProcessorV1.name)
 
   @Process('execute')
   async execute(job: Job<ExecuteData>) {
