@@ -1,13 +1,17 @@
 import { ApiProperty } from '@nestjs/swagger'
+import { Type } from 'class-transformer'
 import {
   IsArray,
+  IsDefined,
   IsEthereumAddress,
   IsNotEmpty,
   IsObject,
   IsString,
+  IsUrl,
+  ValidateNested,
 } from 'class-validator'
 
-class CrossSubnetMessage {
+export class CrossSubnetMessage {
   @ApiProperty({
     description: 'The id of a cross-subnet message',
   })
@@ -18,8 +22,9 @@ class CrossSubnetMessage {
   @ApiProperty({
     description: 'The endpoint of the receiving subnet',
   })
+  @IsDefined()
   @IsNotEmpty()
-  @IsString()
+  @IsUrl()
   receivingSubnetEndpoint: string
 
   @ApiProperty({
@@ -38,6 +43,7 @@ class CrossSubnetMessage {
 
   @ApiProperty({
     description: 'The arguments passed to the called method',
+    required: false,
   })
   @IsNotEmpty()
   @IsArray()
@@ -48,8 +54,9 @@ export class ExecuteDto {
   @ApiProperty({
     description: 'The cross-subnet message to be executed',
   })
-  @IsNotEmpty()
   @IsObject()
+  @ValidateNested()
+  @Type(() => CrossSubnetMessage)
   crossSubnetMessage: CrossSubnetMessage
 
   @ApiProperty({
