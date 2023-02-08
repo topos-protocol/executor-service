@@ -1,20 +1,20 @@
 import { Test, TestingModule } from '@nestjs/testing'
 
-import { ExecuteController } from './execute.controller'
+import { ExecuteControllerV1 } from './execute.controller'
 import { ExecuteDto } from './execute.dto'
-import { ExecuteService } from './execute.service'
+import { ExecuteServiceV1 } from './execute.service'
 
 describe('ExecuteController', () => {
   let app: TestingModule
-  let executeController: ExecuteController
-  let executeService: ExecuteService
+  let executeController: ExecuteControllerV1
+  let executeService: ExecuteServiceV1
 
   beforeEach(async () => {
     app = await Test.createTestingModule({
-      controllers: [ExecuteController],
+      controllers: [ExecuteControllerV1],
     })
       .useMocker((token) => {
-        if (token === ExecuteService) {
+        if (token === ExecuteServiceV1) {
           return {
             execute: jest.fn().mockImplementation(
               () =>
@@ -27,8 +27,8 @@ describe('ExecuteController', () => {
       })
       .compile()
 
-    executeController = app.get(ExecuteController)
-    executeService = app.get(ExecuteService)
+    executeController = app.get(ExecuteControllerV1)
+    executeService = app.get(ExecuteServiceV1)
   })
 
   describe('execute', () => {
@@ -45,7 +45,7 @@ describe('ExecuteController', () => {
         inclusionProof: new Uint8Array(),
       }
 
-      expect(await executeController.execute(executeDto)).toEqual({})
+      expect(await executeController.executeV1(executeDto)).toEqual({})
     })
 
     it('should call executeService.execute', () => {
@@ -61,7 +61,7 @@ describe('ExecuteController', () => {
         inclusionProof: new Uint8Array(),
       }
 
-      executeController.execute(executeDto)
+      executeController.executeV1(executeDto)
       expect(executeService.execute).toHaveBeenCalled()
     })
   })

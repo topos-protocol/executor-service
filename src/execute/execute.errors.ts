@@ -12,5 +12,5 @@ export enum CONTRACT_ERRORS {
 
 export enum QUEUE_ERRORS {
   JOB_NOT_FOUND = 'Job // A job with the provided id could not be found!',
-  REDIS_NOT_AVAILABLE = 'Redis // A job with the provided id could not be found!',
+  REDIS_NOT_AVAILABLE = 'Redis // Could not connect to Redis!',
 }

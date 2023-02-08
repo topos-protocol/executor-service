@@ -11,8 +11,9 @@ import {
   PROVIDER_ERRORS,
   WALLET_ERRORS,
 } from './execute.errors'
-import { ExecuteService } from './execute.service'
+import { ExecuteServiceV1 } from './execute.service'
 import { AllExceptionsFilter } from '../filters/all-exceptions.filter'
+import { BullModule } from '@nestjs/bull'
 
 const VALID_PRIVATE_KEY =
   'c6cbd7d76bc5baca530c875663711b947efa6a86a900a9e8645ce32e5821484e'
@@ -38,13 +39,14 @@ const contractMock = {
 
 describe('AppService', () => {
   let app: TestingModule
-  let executeService: ExecuteService
+  let executeService: ExecuteServiceV1
   let configService: ConfigService
 
   beforeEach(async () => {
     app = await Test.createTestingModule({
+      imports: [BullModule.registerQueue({ name: 'execute' })],
       providers: [
-        ExecuteService,
+        ExecuteServiceV1,
         {
           provide: APP_FILTER,
           useClass: AllExceptionsFilter,
@@ -60,7 +62,7 @@ describe('AppService', () => {
       })
       .compile()
 
-    executeService = app.get(ExecuteService)
+    executeService = app.get(ExecuteServiceV1)
     configService = app.get(ConfigService)
   })
 

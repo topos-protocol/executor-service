@@ -5,6 +5,7 @@ import {
   Get,
   Param,
   Post,
+  Sse,
   UseGuards,
 } from '@nestjs/common'
 import { ApiBearerAuth, ApiParam, ApiTags } from '@nestjs/swagger'
@@ -34,5 +35,14 @@ export class ExecuteControllerV1 {
   @ApiParam({ name: 'jobId' })
   async getJob(@Param('jobId') jobId: string) {
     return this.executeService.getJobById(jobId)
+  }
+
+  @ApiTags('job')
+  @Sse('job/subscribe/:jobId')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @ApiParam({ name: 'jobId' })
+  async subscribeToJob(@Param('jobId') jobId: string) {
+    return this.executeService.subscribeToJobById(jobId)
   }
 }
