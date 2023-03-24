@@ -75,7 +75,7 @@ export class ExecuteServiceV1 {
   private _verifyPrivateKey() {
     const privateKey = this.configService.get<string>('PRIVATE_KEY')
 
-    if (privateKey.length !== 64) {
+    if (!ethers.utils.isHexString(privateKey, 32)) {
       throw new Error(WALLET_ERRORS.INVALID_PRIVATE_KEY)
     }
   }
