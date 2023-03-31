@@ -23,11 +23,6 @@ import {
   WALLET_ERRORS,
 } from './execute.errors'
 
-// export type ExecuteData = Pick<
-//   ExecuteDto,
-//   'crossSubnetMessageBytesHex' | 'txTrieMerkleProof' | 'txTrieRoot'
-// > & { contract: ethers.Contract }
-
 @Processor('execute')
 export class ExecutionProcessorV1 {
   private readonly logger = new Logger(ExecutionProcessorV1.name)
@@ -50,6 +45,7 @@ export class ExecutionProcessorV1 {
     const receivingSubnet = await this._getReceivingSubnetFromId(subnetId)
 
     const provider = await this._createProvider(receivingSubnet.endpoint)
+    this.logger.debug(`ReceivingSubnet: ${receivingSubnet.endpoint}`)
     const wallet = this._createWallet(
       provider as ethers.providers.JsonRpcProvider
     )
@@ -60,24 +56,49 @@ export class ExecutionProcessorV1 {
       wallet
     )
 
-    const tx: ethers.ContractTransaction = await contract.executeAssetTransfer(
-      txRaw,
-      // indexOfDataInTxRaw,
-      txTrieMerkleProof,
-      txTrieRoot
-    )
-    console.log(tx)
+    this.logger.debug(`Trie root: ${txTrieRoot}`)
+
+    let certId =
+      '0x0000000000000000000000000000000000000000000000000000000000000000'
+    let i = 1
+    while (
+      certId ==
+      '0x0000000000000000000000000000000000000000000000000000000000000000'
+    ) {
+      this.logger.debug(`Waiting for cert to be imported (${i})`)
+      certId = await contract.txRootToCertId(txTrieRoot)
+      this.logger.debug(`Cert id: ${certId}`)
+      i++
+    }
+
+    console.log(txTrieRoot)
+    console.log(indexOfDataInTxRaw)
+    console.log(txRaw)
+    console.log(txTrieMerkleProof)
+    const tx: ethers.ContractTransaction = await contract
+      .executeAssetTransfer(
+        indexOfDataInTxRaw,
+        txTrieMerkleProof,
+        txRaw,
+        txTrieRoot,
+        { gasLimit: 4_000_000 }
+      )
+      .catch((error) => {
+        this.logger.debug('Error on tx asset transfer send')
+        console.error(error)
+      })
 
     await tx.wait().then(
       (receipt) => {
         this.logger.debug(':) tx ok on receiving subnet')
         this.logger.debug(receipt)
       },
-      (error) => {
-        // return error.checkCall().then((error) => {
+      async (error) => {
         this.logger.error(':( tx nok on receiving subnet')
         this.logger.error(error)
-        // })
+        console.log(Object.keys(error))
+        console.log(error.reason)
+        console.log(error.code)
       }
     )
   }

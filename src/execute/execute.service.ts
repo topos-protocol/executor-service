@@ -3,6 +3,7 @@ import { Injectable, Logger, MessageEvent } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { Queue } from 'bull'
 import { ethers } from 'ethers'
+import { Observable } from 'rxjs'
 
 import { ExecuteDto } from './execute.dto'
 import {
@@ -11,8 +12,7 @@ import {
   PROVIDER_ERRORS,
   WALLET_ERRORS,
 } from './execute.errors'
-import { abiToHumanReadableAbi } from '../utils'
-import { Observable } from 'rxjs'
+
 
 @Injectable()
 export class ExecuteServiceV1 {

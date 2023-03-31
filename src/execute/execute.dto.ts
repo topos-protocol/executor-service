@@ -44,8 +44,7 @@ export class ExecuteDto {
   })
   @IsDefined()
   @IsNotEmpty()
-  @IsArray()
-  txTrieMerkleProof: string[]
+  txTrieMerkleProof: string
 
   // @ApiProperty({
   //   description: 'The address of the contract',
