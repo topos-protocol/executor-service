@@ -71,10 +71,8 @@ export class ExecutionProcessorV1 {
       i++
     }
 
-    console.log(txTrieRoot)
-    console.log(indexOfDataInTxRaw)
-    console.log(txRaw)
-    console.log(txTrieMerkleProof)
+    await job.progress(50)
+
     const tx: ethers.ContractTransaction = await contract
       .executeAssetTransfer(
         indexOfDataInTxRaw,
@@ -88,19 +86,9 @@ export class ExecutionProcessorV1 {
         console.error(error)
       })
 
-    await tx.wait().then(
-      (receipt) => {
-        this.logger.debug(':) tx ok on receiving subnet')
-        this.logger.debug(receipt)
-      },
-      async (error) => {
-        this.logger.error(':( tx nok on receiving subnet')
-        this.logger.error(error)
-        console.log(Object.keys(error))
-        console.log(error.reason)
-        console.log(error.code)
-      }
-    )
+    return tx.wait().then(async () => {
+      await job.progress(100)
+    })
   }
 
   private async _getReceivingSubnetFromId(subnetId: string) {

@@ -13,7 +13,6 @@ import {
   WALLET_ERRORS,
 } from './execute.errors'
 
-
 @Injectable()
 export class ExecuteServiceV1 {
   private readonly logger = new Logger(ExecuteServiceV1.name)
@@ -52,12 +51,30 @@ export class ExecuteServiceV1 {
   subscribeToJobById(jobId: string) {
     return new Observable<MessageEvent>((subscriber) => {
       this.executionQueue.getJob(jobId).then((job) => {
+        const progressListener = (job, progress) => {
+          if (job.id === jobId) {
+            this.logger.debug(`Job progress: ${progress}`)
+            subscriber.next({ data: { payload: progress, type: 'progress' } })
+          }
+        }
+
+        this.executionQueue.on('progress', progressListener)
+
         job
           .finished()
-          .catch(() => {
-            subscriber.error(job.failedReason)
+          .then((payload) => {
+            this.logger.debug(`Job completed!`)
+            this.executionQueue.removeListener('progress', progressListener)
+            subscriber.next({ data: { payload, type: 'completed' } })
+            subscriber.complete()
           })
-          .finally(() => {
+          .catch(() => {
+            const messageEvent: MessageEvent = {
+              data: job.failedReason,
+            }
+            this.logger.debug(`Job failed!`)
+            this.logger.debug(job.failedReason)
+            subscriber.error(messageEvent)
             subscriber.complete()
           })
       })
