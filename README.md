@@ -54,7 +54,7 @@ Regarding the Executor Service's execution environment (see [environment](#envir
 
 Install NodeJS by following the guidelines from the [official NodeJS website](https://nodejs.dev/en/).
 
-## Install
+### Install Dependencies
 
 To installation `npm` dependencies, run the following command:
 
@@ -62,7 +62,7 @@ To installation `npm` dependencies, run the following command:
 npm i
 ```
 
-## Start
+### Run the Executor Service
 
 To start an instance of the Executor Service, run the following command:
 
