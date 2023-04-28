@@ -11,8 +11,9 @@ import {
 } from '@nestjs/bull'
 import { Logger } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
-import * as ToposCoreJSON from '@toposware/topos-smart-contracts/brownie/build/contracts/ToposCore.json'
-import * as SubnetRegistratorJSON from '@toposware/topos-smart-contracts/brownie/build/contracts/SubnetRegistrator.json'
+import * as ToposCoreJSON from '@toposware/topos-smart-contracts/artifacts/contracts/topos-core/ToposCore.sol/ToposCore.json'
+import * as ToposMessagingJSON from '@toposware/topos-smart-contracts/artifacts/contracts/topos-core/ToposMessaging.sol/ToposMessaging.json'
+import * as SubnetRegistratorJSON from '@toposware/topos-smart-contracts/artifacts/contracts/topos-core/SubnetRegistrator.sol/SubnetRegistrator.json'
 import { Job } from 'bull'
 import { ethers } from 'ethers'
 
@@ -42,6 +43,11 @@ export class ExecutionProcessorV1 {
     const toposCoreContractAddress = this.configService.get<string>(
       'TOPOS_CORE_CONTRACT_ADDRESS'
     )
+
+    const toposMessagingContractAddress = this.configService.get<string>(
+      'TOPOS_MESSAGING_CONTRACT_ADDRESS'
+    )
+
     const receivingSubnet = await this._getReceivingSubnetFromId(subnetId)
 
     const provider = await this._createProvider(receivingSubnet.endpoint)
@@ -49,10 +55,18 @@ export class ExecutionProcessorV1 {
     const wallet = this._createWallet(
       provider as ethers.providers.JsonRpcProvider
     )
-    const contract = await this._getContract(
+
+    const toposCoreContract = await this._getContract(
       provider,
       toposCoreContractAddress,
       ToposCoreJSON.abi,
+      wallet
+    )
+
+    const toposMessagingContract = await this._getContract(
+      provider,
+      toposMessagingContractAddress,
+      ToposMessagingJSON.abi,
       wallet
     )
 
@@ -66,14 +80,14 @@ export class ExecutionProcessorV1 {
       '0x0000000000000000000000000000000000000000000000000000000000000000'
     ) {
       this.logger.debug(`Waiting for cert to be imported (${i})`)
-      certId = await contract.txRootToCertId(txTrieRoot)
+      certId = await toposCoreContract.txRootToCertId(txTrieRoot)
       this.logger.debug(`Cert id: ${certId}`)
       i++
     }
 
     await job.progress(50)
 
-    const tx: ethers.ContractTransaction = await contract
+    const tx: ethers.ContractTransaction = await toposMessagingContract
       .executeAssetTransfer(
         indexOfDataInTxRaw,
         txTrieMerkleProof,
@@ -86,8 +100,9 @@ export class ExecutionProcessorV1 {
         console.error(error)
       })
 
-    return tx.wait().then(async () => {
+    return tx.wait().then(async (receipt) => {
       await job.progress(100)
+      return receipt
     })
   }
 
