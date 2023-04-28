@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common'
-import { ConfigModule } from '@nestjs/config'
+import { ConfigModule, ConfigService } from '@nestjs/config'
 import { BullModule } from '@nestjs/bull'
 
 import { AuthModule } from './auth/auth.module'
@@ -9,11 +9,15 @@ import { ExecuteModuleV1 } from './execute/execute.module'
   imports: [
     ConfigModule.forRoot(),
     AuthModule,
-    BullModule.forRoot({
-      redis: {
-        host: 'localhost',
-        port: 6379,
-      },
+    BullModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: (configService: ConfigService) => ({
+        redis: {
+          host: configService.getOrThrow('REDIS_HOST'),
+          port: configService.getOrThrow('REDIS_PORT'),
+        },
+      }),
+      inject: [ConfigService],
     }),
     ExecuteModuleV1,
   ],

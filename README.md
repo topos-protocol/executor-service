@@ -32,6 +32,8 @@ Create an `.env` at the root of the project, with the content of `.env.example`,
 ```
 AUTH0_AUDIENCE=
 AUTH0_ISSUER_URL=
+REDIS_HOST=
+REDIS_PORT=
 TOPOS_SUBNET_ENDPOINT=
 SUBNET_REGISTRATOR_CONTRACT_ADDRESS=
 TOPOS_CORE_CONTRACT_ADDRESS=
