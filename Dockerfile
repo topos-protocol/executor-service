@@ -1,10 +1,12 @@
 FROM node:lts-slim
 
+ARG NPM_TOKEN
 WORKDIR /usr/src/app
 
-COPY package*.json .
+COPY package*.json .npmrc ./
+RUN npm set //npm.pkg.github.com/:_authToken $NPM_TOKEN
 
-RUN npm install
+RUN npm ci
 
 COPY . .
 
