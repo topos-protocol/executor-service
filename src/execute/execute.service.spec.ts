@@ -69,7 +69,7 @@ describe('AppService', () => {
   describe('execute', () => {
     it('should correctly call ethers API when input is correct', async () => {
       const ethersProviderMock = jest
-        .spyOn<any, any>(ethers.providers, 'JsonRpcProvider')
+        .spyOn<any, any>(ethers.providers, 'WebSocketProvider')
         .mockReturnValue(providerMock)
 
       const ethersWalletMock = jest

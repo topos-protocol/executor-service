@@ -15,7 +15,7 @@ import * as ToposCoreJSON from '@toposware/topos-smart-contracts/artifacts/contr
 import * as ToposMessagingJSON from '@toposware/topos-smart-contracts/artifacts/contracts/topos-core/ToposMessaging.sol/ToposMessaging.json'
 import * as SubnetRegistratorJSON from '@toposware/topos-smart-contracts/artifacts/contracts/topos-core/SubnetRegistrator.sol/SubnetRegistrator.json'
 import { Job } from 'bull'
-import { ethers } from 'ethers'
+import { ethers, providers } from 'ethers'
 
 import { ExecuteDto } from './execute.dto'
 import {
@@ -52,9 +52,8 @@ export class ExecutionProcessorV1 {
 
     const provider = await this._createProvider(receivingSubnet.endpoint)
     this.logger.debug(`ReceivingSubnet: ${receivingSubnet.endpoint}`)
-    const wallet = this._createWallet(
-      provider as ethers.providers.JsonRpcProvider
-    )
+
+    const wallet = this._createWallet(provider)
 
     const toposCoreContract = await this._getContract(
       provider,
@@ -123,11 +122,9 @@ export class ExecutionProcessorV1 {
     return contract.subnets(subnetId)
   }
 
-  private _createProvider(
-    endpoint: string
-  ): Promise<ethers.providers.JsonRpcProvider> {
-    return new Promise((resolve, reject) => {
-      const provider = new ethers.providers.JsonRpcProvider(endpoint)
+  private _createProvider(endpoint: string) {
+    return new Promise<providers.WebSocketProvider>((resolve, reject) => {
+      const provider = new ethers.providers.WebSocketProvider(endpoint)
 
       // Fix: Timeout to leave time to errors to be asynchronously caught
       const timeoutId = setTimeout(() => {
@@ -143,7 +140,7 @@ export class ExecutionProcessorV1 {
     })
   }
 
-  private _createWallet(provider: ethers.providers.JsonRpcProvider) {
+  private _createWallet(provider: providers.WebSocketProvider) {
     try {
       return new ethers.Wallet(
         this.configService.get<string>('PRIVATE_KEY'),
@@ -155,7 +152,7 @@ export class ExecutionProcessorV1 {
   }
 
   private async _getContract(
-    provider: ethers.providers.JsonRpcProvider,
+    provider: providers.WebSocketProvider,
     contractAddress: string,
     contractInterface: ethers.ContractInterface,
     wallet?: ethers.Wallet
