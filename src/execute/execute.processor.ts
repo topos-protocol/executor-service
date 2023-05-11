@@ -11,9 +11,9 @@ import {
 } from '@nestjs/bull'
 import { Logger } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
-import * as ToposCoreJSON from '@toposware/topos-smart-contracts/artifacts/contracts/topos-core/ToposCore.sol/ToposCore.json'
-import * as ToposMessagingJSON from '@toposware/topos-smart-contracts/artifacts/contracts/topos-core/ToposMessaging.sol/ToposMessaging.json'
-import * as SubnetRegistratorJSON from '@toposware/topos-smart-contracts/artifacts/contracts/topos-core/SubnetRegistrator.sol/SubnetRegistrator.json'
+import * as ToposCoreJSON from '@topos-network/topos-smart-contracts/artifacts/contracts/topos-core/ToposCore.sol/ToposCore.json'
+import * as ToposMessagingJSON from '@topos-network/topos-smart-contracts/artifacts/contracts/topos-core/ToposMessaging.sol/ToposMessaging.json'
+import * as SubnetRegistratorJSON from '@topos-network/topos-smart-contracts/artifacts/contracts/topos-core/SubnetRegistrator.sol/SubnetRegistrator.json'
 import { Job } from 'bull'
 import { ethers, providers } from 'ethers'
 
