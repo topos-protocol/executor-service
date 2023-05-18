@@ -48,10 +48,11 @@ export class ExecutionProcessorV1 {
       'TOPOS_MESSAGING_CONTRACT_ADDRESS'
     )
 
-    const receivingSubnet = await this._getReceivingSubnetFromId(subnetId)
+    const receivingSubnetEndpoint =
+      await this._getReceivingSubnetEndpointFromId(subnetId)
 
-    const provider = await this._createProvider(receivingSubnet.endpoint)
-    this.logger.debug(`ReceivingSubnet: ${receivingSubnet.endpoint}`)
+    const provider = await this._createProvider(receivingSubnetEndpoint)
+    this.logger.debug(`ReceivingSubnet: ${receivingSubnetEndpoint}`)
 
     const wallet = this._createWallet(provider)
 
@@ -105,26 +106,46 @@ export class ExecutionProcessorV1 {
     })
   }
 
-  private async _getReceivingSubnetFromId(subnetId: string) {
+  private async _getReceivingSubnetEndpointFromId(subnetId: string) {
     const toposSubnetEndpoint = this.configService.get<string>(
       'TOPOS_SUBNET_ENDPOINT'
+    )
+    const toposCoreContractAddress = this.configService.get<string>(
+      'TOPOS_CORE_CONTRACT_ADDRESS'
     )
     const subnetRegistratorContractAddress = this.configService.get<string>(
       'SUBNET_REGISTRATOR_CONTRACT_ADDRESS'
     )
+
     const provider = await this._createProvider(toposSubnetEndpoint)
-    const contract = await this._getContract(
+
+    const toposCoreContract = await this._getContract(
       provider,
-      subnetRegistratorContractAddress,
-      SubnetRegistratorJSON.abi
+      toposCoreContractAddress,
+      ToposCoreJSON.abi
     )
 
-    return contract.subnets(subnetId)
+    const toposSubnetId = await toposCoreContract.networkSubnetId()
+
+    if (subnetId === toposSubnetId) {
+      return toposSubnetEndpoint
+    } else {
+      const subnetRegistratorContract = await this._getContract(
+        provider,
+        subnetRegistratorContractAddress,
+        SubnetRegistratorJSON.abi
+      )
+
+      const receivingSubnet = await subnetRegistratorContract.subnets(subnetId)
+      return receivingSubnet.endpoint
+    }
   }
 
   private _createProvider(endpoint: string) {
     return new Promise<providers.WebSocketProvider>((resolve, reject) => {
-      const provider = new ethers.providers.WebSocketProvider(endpoint)
+      const provider = new ethers.providers.WebSocketProvider(
+        `ws://${endpoint}/ws`
+      )
 
       // Fix: Timeout to leave time to errors to be asynchronously caught
       const timeoutId = setTimeout(() => {
