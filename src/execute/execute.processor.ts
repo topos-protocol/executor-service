@@ -12,8 +12,13 @@ import {
 import { Logger } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import * as ToposCoreJSON from '@topos-network/topos-smart-contracts/artifacts/contracts/topos-core/ToposCore.sol/ToposCore.json'
-import * as ToposMessagingJSON from '@topos-network/topos-smart-contracts/artifacts/contracts/topos-core/ToposMessaging.sol/ToposMessaging.json'
+import * as ERC20MessagingJSON from '@topos-network/topos-smart-contracts/artifacts/contracts/examples/ERC20Messaging.sol/ERC20Messaging.json'
 import * as SubnetRegistratorJSON from '@topos-network/topos-smart-contracts/artifacts/contracts/topos-core/SubnetRegistrator.sol/SubnetRegistrator.json'
+import { ERC20Messaging } from '@topos-network/topos-smart-contracts/typechain-types/contracts/examples'
+import {
+  SubnetRegistrator,
+  ToposCore,
+} from '@topos-network/topos-smart-contracts/typechain-types/contracts/topos-core'
 import { Job } from 'bull'
 import { ethers, providers } from 'ethers'
 
@@ -44,8 +49,8 @@ export class ExecutionProcessorV1 {
       'TOPOS_CORE_CONTRACT_ADDRESS'
     )
 
-    const toposMessagingContractAddress = this.configService.get<string>(
-      'TOPOS_MESSAGING_CONTRACT_ADDRESS'
+    const erc20MessagingContractAddress = this.configService.get<string>(
+      'ERC20_MESSAGING_CONTRACT_ADDRESS'
     )
 
     const receivingSubnetEndpoint =
@@ -56,19 +61,19 @@ export class ExecutionProcessorV1 {
 
     const wallet = this._createWallet(provider)
 
-    const toposCoreContract = await this._getContract(
+    const toposCoreContract = (await this._getContract(
       provider,
       toposCoreContractAddress,
       ToposCoreJSON.abi,
       wallet
-    )
+    )) as ToposCore
 
-    const toposMessagingContract = await this._getContract(
+    const erc20MessagingContract = (await this._getContract(
       provider,
-      toposMessagingContractAddress,
-      ToposMessagingJSON.abi,
+      erc20MessagingContractAddress,
+      ERC20MessagingJSON.abi,
       wallet
-    )
+    )) as ERC20Messaging
 
     this.logger.debug(`Trie root: ${txTrieRoot}`)
 
@@ -87,18 +92,15 @@ export class ExecutionProcessorV1 {
 
     await job.progress(50)
 
-    const tx: ethers.ContractTransaction = await toposMessagingContract
-      .executeAssetTransfer(
-        indexOfDataInTxRaw,
-        txTrieMerkleProof,
-        txRaw,
-        txTrieRoot,
-        { gasLimit: 4_000_000 }
-      )
-      .catch((error) => {
-        this.logger.debug('Error on tx asset transfer send')
-        console.error(error)
-      })
+    const tx = await erc20MessagingContract.execute(
+      indexOfDataInTxRaw,
+      txTrieMerkleProof,
+      txRaw,
+      txTrieRoot,
+      {
+        gasLimit: 4_000_000,
+      }
+    )
 
     return tx.wait().then(async (receipt) => {
       await job.progress(100)
@@ -130,11 +132,11 @@ export class ExecutionProcessorV1 {
     if (subnetId === toposSubnetId) {
       return toposSubnetEndpoint
     } else {
-      const subnetRegistratorContract = await this._getContract(
+      const subnetRegistratorContract = (await this._getContract(
         provider,
         subnetRegistratorContractAddress,
         SubnetRegistratorJSON.abi
-      )
+      )) as SubnetRegistrator
 
       const receivingSubnet = await subnetRegistratorContract.subnets(subnetId)
       return receivingSubnet.endpoint
