@@ -12,12 +12,12 @@ import {
 import { Logger } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import * as ToposCoreJSON from '@topos-network/topos-smart-contracts/artifacts/contracts/topos-core/ToposCore.sol/ToposCore.json'
-import * as ERC20MessagingJSON from '@topos-network/topos-smart-contracts/artifacts/contracts/examples/ERC20Messaging.sol/ERC20Messaging.json'
+import * as ToposMessagingJSON from '@topos-network/topos-smart-contracts/artifacts/contracts/topos-core/ToposMessaging.sol/ToposMessaging.json'
 import * as SubnetRegistratorJSON from '@topos-network/topos-smart-contracts/artifacts/contracts/topos-core/SubnetRegistrator.sol/SubnetRegistrator.json'
-import { ERC20Messaging } from '@topos-network/topos-smart-contracts/typechain-types/contracts/examples'
 import {
   SubnetRegistrator,
   ToposCore,
+  ToposMessaging,
 } from '@topos-network/topos-smart-contracts/typechain-types/contracts/topos-core'
 import { Job } from 'bull'
 import { ethers, providers } from 'ethers'
@@ -38,19 +38,16 @@ export class ExecutionProcessorV1 {
   @Process('execute')
   async execute(job: Job<ExecuteDto>) {
     const {
-      txRaw,
       indexOfDataInTxRaw,
+      messagingContractAddress,
       subnetId,
+      txRaw,
       txTrieMerkleProof,
       txTrieRoot,
     } = job.data
 
     const toposCoreContractAddress = this.configService.get<string>(
       'TOPOS_CORE_CONTRACT_ADDRESS'
-    )
-
-    const erc20MessagingContractAddress = this.configService.get<string>(
-      'ERC20_MESSAGING_CONTRACT_ADDRESS'
     )
 
     const receivingSubnetEndpoint =
@@ -68,12 +65,12 @@ export class ExecutionProcessorV1 {
       wallet
     )) as ToposCore
 
-    const erc20MessagingContract = (await this._getContract(
+    const messagingContract = (await this._getContract(
       provider,
-      erc20MessagingContractAddress,
-      ERC20MessagingJSON.abi,
+      messagingContractAddress,
+      ToposMessagingJSON.abi,
       wallet
-    )) as ERC20Messaging
+    )) as ToposMessaging
 
     this.logger.debug(`Trie root: ${txTrieRoot}`)
 
@@ -92,7 +89,7 @@ export class ExecutionProcessorV1 {
 
     await job.progress(50)
 
-    const tx = await erc20MessagingContract.execute(
+    const tx = await messagingContract.execute(
       indexOfDataInTxRaw,
       txTrieMerkleProof,
       txRaw,
