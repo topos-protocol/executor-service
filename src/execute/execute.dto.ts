@@ -1,7 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger'
 import {
-  IsArray,
   IsDefined,
+  IsEthereumAddress,
   IsNotEmpty,
   IsNumber,
   IsString,
@@ -46,25 +46,10 @@ export class ExecuteDto {
   @IsNotEmpty()
   txTrieMerkleProof: string
 
-  // @ApiProperty({
-  //   description: 'The address of the contract',
-  // })
-  // @IsNotEmpty()
-  // @IsEthereumAddress()
-  // contractAddress: string
-
-  // @ApiProperty({
-  //   description: 'The name of the method to be called',
-  // })
-  // @IsNotEmpty()
-  // @IsString()
-  // method: string
-
-  // @ApiProperty({
-  //   description: 'The arguments passed to the called method',
-  //   required: false,
-  // })
-  // @IsNotEmpty()
-  // @IsArray()
-  // args: string[]
+  @ApiProperty({
+    description: 'The address of the messaging contract',
+  })
+  @IsNotEmpty()
+  @IsEthereumAddress()
+  messagingContractAddress: string
 }
