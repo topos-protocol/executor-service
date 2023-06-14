@@ -1,9 +1,14 @@
 {
-  "name": "nest-typescript-starter",
+  "name": "@topos-network/executor-service",
   "private": true,
   "version": "1.0.0",
-  "description": "Nest TypeScript starter repository",
+  "description": "Delegate cross-subnet messages call on receiving subnets with the Executor service",
   "license": "MIT",
+  "author": "Sébastien Dan <sebastien.dan@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/topos-network/executor-service.git"
+  },
   "scripts": {
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
