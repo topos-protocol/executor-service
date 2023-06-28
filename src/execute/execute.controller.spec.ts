@@ -4,6 +4,15 @@ import { ExecuteControllerV1 } from './execute.controller'
 import { ExecuteDto } from './execute.dto'
 import { ExecuteServiceV1 } from './execute.service'
 
+const validExecuteDto: ExecuteDto = {
+  indexOfDataInTxRaw: 4,
+  messagingContractAddress: '',
+  subnetId: '',
+  txRaw: '',
+  txTrieRoot: '',
+  txTrieMerkleProof: '',
+}
+
 describe('ExecuteController', () => {
   let app: TestingModule
   let executeController: ExecuteControllerV1
@@ -33,35 +42,11 @@ describe('ExecuteController', () => {
 
   describe('execute', () => {
     it('should complete', async () => {
-      const executeDto: ExecuteDto = {
-        certId: '',
-        crossSubnetMessage: {
-          args: [],
-          contractAddress: '',
-          id: '',
-          method: '',
-          receivingSubnetEndpoint: '',
-        },
-        inclusionProof: new Uint8Array(),
-      }
-
-      expect(await executeController.executeV1(executeDto)).toEqual({})
+      expect(await executeController.executeV1(validExecuteDto)).toEqual({})
     })
 
     it('should call executeService.execute', () => {
-      const executeDto: ExecuteDto = {
-        certId: '',
-        crossSubnetMessage: {
-          args: [],
-          contractAddress: '',
-          id: '',
-          method: '',
-          receivingSubnetEndpoint: '',
-        },
-        inclusionProof: new Uint8Array(),
-      }
-
-      executeController.executeV1(executeDto)
+      executeController.executeV1(validExecuteDto)
       expect(executeService.execute).toHaveBeenCalled()
     })
   })
