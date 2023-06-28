@@ -1,5 +1,5 @@
 {
-  "name": "@topos-network/executor-service",
+  "name": "@topos-protocol/executor-service",
   "private": true,
   "version": "1.0.0",
   "description": "Delegate cross-subnet messages call on receiving subnets with the Executor service",
@@ -7,7 +7,7 @@
   "author": "Sébastien Dan <sebastien.dan@gmail.com>",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/topos-network/executor-service.git"
+    "url": "git+https://github.com/topos-protocol/executor-service.git"
   },
   "scripts": {
     "build": "nest build",
@@ -33,7 +33,7 @@
     "@nestjs/passport": "^9.0.0",
     "@nestjs/platform-express": "^9.4.0",
     "@nestjs/swagger": "^6.1.2",
-    "@topos-network/topos-smart-contracts": "^1.1.1",
+    "@topos-protocol/topos-smart-contracts": "^1.1.2",
     "bcrypt": "^5.1.0",
     "bull": "^4.10.1",
     "class-transformer": "^0.5.1",
