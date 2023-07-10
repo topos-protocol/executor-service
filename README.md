@@ -13,6 +13,10 @@
   </p>
 </div>
 
+![example workflow](https://github.com/topos-protocol/executor-service/actions/workflows/docker_build_push.yml/badge.svg)
+![example workflow](https://github.com/topos-protocol/executor-service/actions/workflows/test.yml/badge.svg)
+[![](https://dcbadge.vercel.app/api/server/7HZ8F8ykBT?style=flat)](https://discord.gg/7HZ8F8ykBT)
+
 ## Prerequisites
 
 ### Redis

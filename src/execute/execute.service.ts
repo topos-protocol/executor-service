@@ -6,12 +6,7 @@ import { ethers } from 'ethers'
 import { Observable } from 'rxjs'
 
 import { ExecuteDto } from './execute.dto'
-import {
-  CONTRACT_ERRORS,
-  QUEUE_ERRORS,
-  PROVIDER_ERRORS,
-  WALLET_ERRORS,
-} from './execute.errors'
+import { QUEUE_ERRORS, WALLET_ERRORS } from './execute.errors'
 
 @Injectable()
 export class ExecuteServiceV1 {
@@ -59,7 +54,6 @@ export class ExecuteServiceV1 {
         }
 
         this.executionQueue.on('progress', progressListener)
-
         job
           .finished()
           .then((payload) => {
@@ -68,7 +62,7 @@ export class ExecuteServiceV1 {
             subscriber.next({ data: { payload, type: 'completed' } })
             subscriber.complete()
           })
-          .catch(() => {
+          .catch((error) => {
             const messageEvent: MessageEvent = {
               data: job.failedReason,
             }
