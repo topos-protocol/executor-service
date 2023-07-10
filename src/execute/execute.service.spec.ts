@@ -1,9 +1,11 @@
 import { BullModule, getQueueToken } from '@nestjs/bull'
 import { Test, TestingModule } from '@nestjs/testing'
+import { Job } from 'bull'
 
 import { ExecuteDto } from './execute.dto'
 import { ExecuteServiceV1 } from './execute.service'
 import { ConfigService } from '@nestjs/config'
+import { first, firstValueFrom, lastValueFrom } from 'rxjs'
 
 const validExecuteDto: ExecuteDto = {
   indexOfDataInTxRaw: 4,
@@ -19,6 +21,25 @@ const VALID_PRIVATE_KEY =
 
 const executeQueueMock = {
   add: jest.fn().mockReturnValue({ id: '', timestamp: 0 }),
+  getJob: jest.fn().mockImplementation((jobId: string) =>
+    Promise.resolve({
+      id: jobId,
+      failedReason: 'errorMock',
+      finished: jest.fn().mockResolvedValue({}),
+    })
+  ),
+  on: jest
+    .fn()
+    .mockImplementation(
+      (
+        event: 'progress',
+        callback: (job: Partial<Job>, progress: string) => void
+      ) => {
+        const fakeJob = { id: '1' }
+        callback(fakeJob, '')
+      }
+    ),
+  removeListener: jest.fn(),
   client: { status: 'ready' },
 }
 
@@ -53,10 +74,72 @@ describe('ExecuteService', () => {
   describe('execute', () => {
     it('should call queue.add', () => {
       executeService.execute(validExecuteDto)
+
       expect(executeQueueMock.add).toHaveBeenCalledWith(
         'execute',
         validExecuteDto
       )
+    })
+  })
+
+  describe('getJobById', () => {
+    it('should return job', async () => {
+      const jobId = '1'
+      const job = await executeService.getJobById(jobId)
+
+      expect(executeQueueMock.getJob).toHaveBeenCalledWith(jobId)
+      expect(job.id).toBe(jobId)
+    })
+  })
+
+  describe('subscribeToJobById', () => {
+    it('should retrieve the correct job', () => {
+      const jobId = '1'
+      executeService
+        .subscribeToJobById(jobId)
+        .pipe(first())
+        .subscribe(() => {
+          expect(executeQueueMock.getJob).toHaveBeenCalledWith(jobId)
+          expect(executeQueueMock.on).toHaveBeenCalled()
+        })
+    })
+
+    it('should first next some progress', async () => {
+      const jobId = '1'
+      await expect(
+        firstValueFrom(executeService.subscribeToJobById(jobId))
+      ).resolves.toStrictEqual({
+        data: { payload: '', type: 'progress' },
+      })
+    })
+
+    it('should then complete', async () => {
+      const jobId = '1'
+      await expect(
+        lastValueFrom(executeService.subscribeToJobById(jobId))
+      ).resolves.toStrictEqual({
+        data: { payload: {}, type: 'completed' },
+      })
+    })
+
+    it('should fail if job finishes with rejection', async () => {
+      const jobId = '1'
+
+      jest.spyOn(executeQueueMock, 'getJob').mockImplementationOnce(
+        (jobId: string) =>
+          new Promise((resolve) => {
+            const job: Partial<Job> = {
+              id: jobId,
+              failedReason: 'errorMock',
+              finished: jest.fn().mockRejectedValueOnce(''),
+            }
+            resolve(job)
+          })
+      )
+
+      await expect(
+        lastValueFrom(executeService.subscribeToJobById(jobId))
+      ).rejects.toStrictEqual({ data: 'errorMock' })
     })
   })
 })
