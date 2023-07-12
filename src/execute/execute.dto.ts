@@ -26,24 +26,24 @@ export class ExecuteDto {
   @ApiProperty({
     description: 'The id of the receiving subnet',
   })
-  @IsDefined()
   @IsNotEmpty()
+  @IsString()
   subnetId: string
 
   @ApiProperty({
     description:
       'The root of the transaction trie including the cross-subnet message transaction from the sending subnet',
   })
-  @IsDefined()
   @IsNotEmpty()
+  @IsString()
   txTrieRoot: string
 
   @ApiProperty({
     description:
       'The merkle proof proving the inclusion of the cross-subnet message transaction from the sending subnet in the certified transaction trie',
   })
-  @IsDefined()
   @IsNotEmpty()
+  @IsString()
   txTrieMerkleProof: string
 
   @ApiProperty({

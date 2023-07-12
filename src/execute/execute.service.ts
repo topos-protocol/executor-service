@@ -45,33 +45,40 @@ export class ExecuteServiceV1 {
 
   subscribeToJobById(jobId: string) {
     return new Observable<MessageEvent>((subscriber) => {
-      this.executionQueue.getJob(jobId).then((job) => {
-        const progressListener = (job, progress) => {
-          if (job.id === jobId) {
-            this.logger.debug(`Job progress: ${progress}`)
-            subscriber.next({ data: { payload: progress, type: 'progress' } })
-          }
-        }
-
-        this.executionQueue.on('progress', progressListener)
-        job
-          .finished()
-          .then((payload) => {
-            this.logger.debug(`Job completed!`)
-            this.executionQueue.removeListener('progress', progressListener)
-            subscriber.next({ data: { payload, type: 'completed' } })
-            subscriber.complete()
-          })
-          .catch((error) => {
-            const messageEvent: MessageEvent = {
-              data: job.failedReason,
+      this.getJobById(jobId)
+        .then((job) => {
+          const progressListener = (job, progress) => {
+            if (job.id === jobId) {
+              this.logger.debug(`Job progress: ${progress}`)
+              subscriber.next({ data: { payload: progress, type: 'progress' } })
             }
-            this.logger.debug(`Job failed!`)
-            this.logger.debug(job.failedReason)
-            subscriber.error(messageEvent)
-            subscriber.complete()
-          })
-      })
+          }
+
+          this.executionQueue.on('progress', progressListener)
+          job
+            .finished()
+            .then((payload) => {
+              this.logger.debug(`Job completed!`)
+              this.executionQueue.removeListener('progress', progressListener)
+              subscriber.next({ data: { payload, type: 'completed' } })
+              subscriber.complete()
+            })
+            .catch((error) => {
+              const messageEvent: MessageEvent = {
+                data: job.failedReason,
+              }
+              this.logger.debug(`Job failed!`)
+              this.logger.debug(job.failedReason)
+              subscriber.error(messageEvent)
+              subscriber.complete()
+            })
+        })
+        .catch((error) => {
+          this.logger.debug(`Job not found!`)
+          this.logger.debug(error)
+          subscriber.error(error)
+          subscriber.complete()
+        })
     })
   }
 
