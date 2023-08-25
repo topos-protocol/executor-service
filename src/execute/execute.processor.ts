@@ -25,9 +25,14 @@ import { ethers, providers } from 'ethers'
 import { ExecuteDto } from './execute.dto'
 import {
   CONTRACT_ERRORS,
+  JOB_ERRORS,
   PROVIDER_ERRORS,
   WALLET_ERRORS,
 } from './execute.errors'
+import { sanitizeURLProtocol } from 'src/utils'
+
+const UNDEFINED_CERTIFICATE_ID =
+  '0x0000000000000000000000000000000000000000000000000000000000000000'
 
 @Processor('execute')
 export class ExecutionProcessorV1 {
@@ -38,16 +43,15 @@ export class ExecutionProcessorV1 {
   @Process('execute')
   async execute(job: Job<ExecuteDto>) {
     const {
-      indexOfDataInTxRaw,
+      logIndexes,
       messagingContractAddress,
+      receiptTrieMerkleProof,
+      receiptTrieRoot,
       subnetId,
-      txRaw,
-      txTrieMerkleProof,
-      txTrieRoot,
     } = job.data
 
     const toposCoreContractAddress = this.configService.get<string>(
-      'TOPOS_CORE_CONTRACT_ADDRESS'
+      'TOPOS_CORE_PROXY_CONTRACT_ADDRESS'
     )
 
     const receivingSubnetEndpoint =
@@ -72,28 +76,30 @@ export class ExecutionProcessorV1 {
       wallet
     )) as ToposMessaging
 
-    this.logger.debug(`Trie root: ${txTrieRoot}`)
+    this.logger.debug(`Trie root: ${receiptTrieRoot}`)
 
-    let certId =
-      '0x0000000000000000000000000000000000000000000000000000000000000000'
+    let certId = UNDEFINED_CERTIFICATE_ID
     let i = 1
-    while (
-      certId ==
-      '0x0000000000000000000000000000000000000000000000000000000000000000'
-    ) {
+
+    while (certId == UNDEFINED_CERTIFICATE_ID && i < 40) {
       this.logger.debug(`Waiting for cert to be imported (${i})`)
-      certId = await toposCoreContract.txRootToCertId(txTrieRoot)
+      certId = await toposCoreContract.receiptRootToCertId(receiptTrieRoot)
       this.logger.debug(`Cert id: ${certId}`)
+      await new Promise<void>((r) => setTimeout(r, 1000))
       i++
+    }
+
+    if (certId == UNDEFINED_CERTIFICATE_ID) {
+      await job.moveToFailed({ message: JOB_ERRORS.MISSING_CERTIFICATE })
+      return
     }
 
     await job.progress(50)
 
     const tx = await messagingContract.execute(
-      indexOfDataInTxRaw,
-      txTrieMerkleProof,
-      txRaw,
-      txTrieRoot,
+      logIndexes,
+      receiptTrieMerkleProof,
+      receiptTrieRoot,
       {
         gasLimit: 4_000_000,
       }
@@ -110,7 +116,7 @@ export class ExecutionProcessorV1 {
       'TOPOS_SUBNET_ENDPOINT'
     )
     const toposCoreContractAddress = this.configService.get<string>(
-      'TOPOS_CORE_CONTRACT_ADDRESS'
+      'TOPOS_CORE_PROXY_CONTRACT_ADDRESS'
     )
     const subnetRegistratorContractAddress = this.configService.get<string>(
       'SUBNET_REGISTRATOR_CONTRACT_ADDRESS'
@@ -143,7 +149,7 @@ export class ExecutionProcessorV1 {
   private _createProvider(endpoint: string) {
     return new Promise<providers.WebSocketProvider>((resolve, reject) => {
       const provider = new ethers.providers.WebSocketProvider(
-        `ws://${endpoint}/ws`
+        sanitizeURLProtocol('ws', `${endpoint}/ws`)
       )
 
       // Fix: Timeout to leave time to errors to be asynchronously caught

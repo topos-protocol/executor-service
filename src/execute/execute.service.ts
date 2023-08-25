@@ -64,12 +64,9 @@ export class ExecuteServiceV1 {
               subscriber.complete()
             })
             .catch((error) => {
-              const messageEvent: MessageEvent = {
-                data: job.failedReason,
-              }
               this.logger.debug(`Job failed!`)
-              this.logger.debug(job.failedReason)
-              subscriber.error(messageEvent)
+              this.logger.debug(error)
+              subscriber.error(error)
               subscriber.complete()
             })
         })

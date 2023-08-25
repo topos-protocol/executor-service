@@ -9,7 +9,8 @@ import { ExecutionProcessorV1 } from './execute.processor'
 
 const VALID_PRIVATE_KEY =
   '0xc6cbd7d76bc5baca530c875663711b947efa6a86a900a9e8645ce32e5821484e'
-const TOPOS_CORE_CONTRACT_ADDRESS = '0x1D7b9f9b1FF6cf0A3BEB0F84fA6F8628E540E97F'
+const TOPOS_CORE_PROXY_CONTRACT_ADDRESS =
+  '0x1D7b9f9b1FF6cf0A3BEB0F84fA6F8628E540E97F'
 const TOPOS_SUBNET_ENDPOINT = 'topos-subnet-endpoint'
 
 const validExecuteJob: Partial<Job<ExecuteDto>> = {
@@ -52,8 +53,8 @@ describe('ExecuteProcessor', () => {
               switch (key) {
                 case 'PRIVATE_KEY':
                   return VALID_PRIVATE_KEY
-                case 'TOPOS_CORE_CONTRACT_ADDRESS':
-                  return TOPOS_CORE_CONTRACT_ADDRESS
+                case 'TOPOS_CORE_PROXY_CONTRACT_ADDRESS':
+                  return TOPOS_CORE_PROXY_CONTRACT_ADDRESS
                 case 'TOPOS_SUBNET_ENDPOINT':
                   return TOPOS_SUBNET_ENDPOINT
               }
