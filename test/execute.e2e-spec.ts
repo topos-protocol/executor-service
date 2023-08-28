@@ -8,12 +8,11 @@ import { ExecuteDto } from '../src/execute/execute.dto'
 import { ExecuteServiceV1 } from '../src/execute/execute.service'
 
 const validExecuteDto: ExecuteDto = {
-  indexOfDataInTxRaw: 4,
+  logIndexes: [],
   messagingContractAddress: '0x3B5aCC9B6e58543512828EFAe26B29B7292c8273',
+  receiptTrieRoot: 'txTrieRoot',
+  receiptTrieMerkleProof: 'txTrieMerkleProof',
   subnetId: 'subnetId',
-  txRaw: 'txRaw',
-  txTrieRoot: 'txTrieRoot',
-  txTrieMerkleProof: 'txTrieMerkleProof',
 }
 
 describe('Execute with ❌ auth (e2e)', () => {
@@ -107,10 +106,10 @@ describe('Execute with ✅ auth (e2e)', () => {
       })
   })
 
-  it('/execute (POST) should reject with invalid dto (invalid indexOfDataInTxRaw)', () => {
+  it('/execute (POST) should reject with invalid dto (invalid logIndexes)', () => {
     const invalidExecuteDto = {
       ...validExecuteDto,
-      indexOfDataInTxRaw: 'invalid',
+      logIndexes: ['invalid'],
     }
     return request(app.getHttpServer())
       .post('/execute')
@@ -118,22 +117,22 @@ describe('Execute with ✅ auth (e2e)', () => {
       .expect({
         statusCode: 400,
         message: [
-          'indexOfDataInTxRaw must be a number conforming to the specified constraints',
+          'each value in logIndexes must be a number conforming to the specified constraints',
         ],
         error: 'Bad Request',
       })
   })
 
-  it('/execute (POST) should reject with invalid dto (missing indexOfDataInTxRaw)', () => {
-    const { indexOfDataInTxRaw, ...invalidExecuteDto } = validExecuteDto
+  it('/execute (POST) should reject with invalid dto (missing logIndexes)', () => {
+    const { logIndexes, ...invalidExecuteDto } = validExecuteDto
     return request(app.getHttpServer())
       .post('/execute')
       .send(invalidExecuteDto)
       .expect({
         statusCode: 400,
         message: [
-          'indexOfDataInTxRaw should not be null or undefined',
-          'indexOfDataInTxRaw must be a number conforming to the specified constraints',
+          'each value in logIndexes must be a number conforming to the specified constraints',
+          'logIndexes should not be empty',
         ],
         error: 'Bad Request',
       })
@@ -166,88 +165,61 @@ describe('Execute with ✅ auth (e2e)', () => {
       })
   })
 
-  it('/execute (POST) should reject with invalid dto (invalid txRaw)', () => {
+  it('/execute (POST) should reject with invalid dto (invalid receiptTrieRoot)', () => {
     const invalidExecuteDto = {
       ...validExecuteDto,
-      txRaw: 1,
+      receiptTrieRoot: 1,
     }
     return request(app.getHttpServer())
       .post('/execute')
       .send(invalidExecuteDto)
       .expect({
         statusCode: 400,
-        message: ['txRaw must be a string'],
+        message: ['receiptTrieRoot must be a string'],
         error: 'Bad Request',
       })
   })
 
-  it('/execute (POST) should reject with invalid dto (missing txRaw)', () => {
-    const { txRaw, ...invalidExecuteDto } = validExecuteDto
-    return request(app.getHttpServer())
-      .post('/execute')
-      .send(invalidExecuteDto)
-      .expect({
-        statusCode: 400,
-        message: ['txRaw must be a string', 'txRaw should not be empty'],
-        error: 'Bad Request',
-      })
-  })
-
-  it('/execute (POST) should reject with invalid dto (invalid txTrieRoot)', () => {
-    const invalidExecuteDto = {
-      ...validExecuteDto,
-      txTrieRoot: 1,
-    }
-    return request(app.getHttpServer())
-      .post('/execute')
-      .send(invalidExecuteDto)
-      .expect({
-        statusCode: 400,
-        message: ['txTrieRoot must be a string'],
-        error: 'Bad Request',
-      })
-  })
-
-  it('/execute (POST) should reject with invalid dto (missing txTrieRoot)', () => {
-    const { txTrieRoot, ...invalidExecuteDto } = validExecuteDto
+  it('/execute (POST) should reject with invalid dto (missing receiptTrieRoot)', () => {
+    const { receiptTrieRoot, ...invalidExecuteDto } = validExecuteDto
     return request(app.getHttpServer())
       .post('/execute')
       .send(invalidExecuteDto)
       .expect({
         statusCode: 400,
         message: [
-          'txTrieRoot must be a string',
-          'txTrieRoot should not be empty',
+          'receiptTrieRoot must be a string',
+          'receiptTrieRoot should not be empty',
         ],
         error: 'Bad Request',
       })
   })
 
-  it('/execute (POST) should reject with invalid dto (invalid txTrieMerkleProof)', () => {
+  it('/execute (POST) should reject with invalid dto (invalid receiptTrieMerkleProof)', () => {
     const invalidExecuteDto = {
       ...validExecuteDto,
-      txTrieMerkleProof: 1,
+      receiptTrieMerkleProof: 1,
     }
     return request(app.getHttpServer())
       .post('/execute')
       .send(invalidExecuteDto)
       .expect({
         statusCode: 400,
-        message: ['txTrieMerkleProof must be a string'],
+        message: ['receiptTrieMerkleProof must be a string'],
         error: 'Bad Request',
       })
   })
 
-  it('/execute (POST) should reject with invalid dto (missing txTrieMerkleProof)', () => {
-    const { txTrieMerkleProof, ...invalidExecuteDto } = validExecuteDto
+  it('/execute (POST) should reject with invalid dto (missing receiptTrieMerkleProof)', () => {
+    const { receiptTrieMerkleProof, ...invalidExecuteDto } = validExecuteDto
     return request(app.getHttpServer())
       .post('/execute')
       .send(invalidExecuteDto)
       .expect({
         statusCode: 400,
         message: [
-          'txTrieMerkleProof must be a string',
-          'txTrieMerkleProof should not be empty',
+          'receiptTrieMerkleProof must be a string',
+          'receiptTrieMerkleProof should not be empty',
         ],
         error: 'Bad Request',
       })

@@ -1,6 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger'
 import {
-  IsDefined,
   IsEthereumAddress,
   IsNotEmpty,
   IsNumber,
@@ -8,21 +7,6 @@ import {
 } from 'class-validator'
 
 export class ExecuteDto {
-  @ApiProperty({
-    description:
-      'The raw transaction of a cross-subnet message from the sending subnet',
-  })
-  @IsNotEmpty()
-  @IsString()
-  txRaw: string
-
-  @ApiProperty({
-    description: 'The index of the data binary in the raw transaction',
-  })
-  @IsDefined()
-  @IsNumber()
-  indexOfDataInTxRaw: number
-
   @ApiProperty({
     description: 'The id of the receiving subnet',
   })
@@ -32,19 +16,27 @@ export class ExecuteDto {
 
   @ApiProperty({
     description:
-      'The root of the transaction trie including the cross-subnet message transaction from the sending subnet',
+      'The array of indexes that the messaging contract should use to validate the cross-subnet message semantically',
   })
   @IsNotEmpty()
-  @IsString()
-  txTrieRoot: string
+  @IsNumber({}, { each: true })
+  logIndexes: number[]
 
   @ApiProperty({
     description:
-      'The merkle proof proving the inclusion of the cross-subnet message transaction from the sending subnet in the certified transaction trie',
+      'The root of the receipt trie including the cross-subnet message tx receipt from the sending subnet',
   })
   @IsNotEmpty()
   @IsString()
-  txTrieMerkleProof: string
+  receiptTrieRoot: string
+
+  @ApiProperty({
+    description:
+      'The merkle proof proving the inclusion of the cross-subnet message tx receipt from the sending subnet in the certified receipt trie',
+  })
+  @IsNotEmpty()
+  @IsString()
+  receiptTrieMerkleProof: string
 
   @ApiProperty({
     description: 'The address of the messaging contract',

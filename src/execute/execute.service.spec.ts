@@ -8,12 +8,11 @@ import { ConfigService } from '@nestjs/config'
 import { first, firstValueFrom, lastValueFrom } from 'rxjs'
 
 const validExecuteDto: ExecuteDto = {
-  indexOfDataInTxRaw: 4,
+  logIndexes: [],
   messagingContractAddress: '',
+  receiptTrieRoot: '',
+  receiptTrieMerkleProof: '',
   subnetId: '',
-  txRaw: '',
-  txTrieRoot: '',
-  txTrieMerkleProof: '',
 }
 
 const VALID_PRIVATE_KEY =
@@ -131,7 +130,7 @@ describe('ExecuteService', () => {
             const job: Partial<Job> = {
               id: jobId,
               failedReason: 'errorMock',
-              finished: jest.fn().mockRejectedValueOnce(''),
+              finished: jest.fn().mockRejectedValueOnce('errorMock'),
             }
             resolve(job)
           })
@@ -139,7 +138,7 @@ describe('ExecuteService', () => {
 
       await expect(
         lastValueFrom(executeService.subscribeToJobById(jobId))
-      ).rejects.toStrictEqual({ data: 'errorMock' })
+      ).rejects.toStrictEqual('errorMock')
     })
   })
 })
