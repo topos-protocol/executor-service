@@ -29,7 +29,7 @@ import {
   PROVIDER_ERRORS,
   WALLET_ERRORS,
 } from './execute.errors'
-import { sanitizeURLProtocol } from 'src/utils'
+import { sanitizeURLProtocol } from '../utils'
 
 const UNDEFINED_CERTIFICATE_ID =
   '0x0000000000000000000000000000000000000000000000000000000000000000'

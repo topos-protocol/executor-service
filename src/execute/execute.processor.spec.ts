@@ -15,12 +15,11 @@ const TOPOS_SUBNET_ENDPOINT = 'topos-subnet-endpoint'
 
 const validExecuteJob: Partial<Job<ExecuteDto>> = {
   data: {
-    indexOfDataInTxRaw: 4,
+    logIndexes: [],
     messagingContractAddress: '',
+    receiptTrieRoot: '',
+    receiptTrieMerkleProof: '',
     subnetId: 'id',
-    txRaw: '',
-    txTrieRoot: '',
-    txTrieMerkleProof: '',
   },
   progress: jest.fn(),
 }
@@ -99,10 +98,9 @@ describe('ExecuteProcessor', () => {
       expect(validExecuteJob.progress).toHaveBeenCalledWith(50)
 
       expect(contractMock.execute).toHaveBeenCalledWith(
-        validExecuteJob.data.indexOfDataInTxRaw,
-        validExecuteJob.data.txTrieMerkleProof,
-        validExecuteJob.data.txRaw,
-        validExecuteJob.data.txTrieRoot,
+        validExecuteJob.data.logIndexes,
+        validExecuteJob.data.receiptTrieRoot,
+        validExecuteJob.data.receiptTrieMerkleProof,
         {
           gasLimit: 4_000_000,
         }

@@ -7,12 +7,11 @@ import { ExecuteServiceV1 } from './execute.service'
 import { Observable, observable } from 'rxjs'
 
 const validExecuteDto: ExecuteDto = {
-  indexOfDataInTxRaw: 4,
+  logIndexes: [],
   messagingContractAddress: '',
+  receiptTrieRoot: '',
+  receiptTrieMerkleProof: '',
   subnetId: '',
-  txRaw: '',
-  txTrieRoot: '',
-  txTrieMerkleProof: '',
 }
 
 describe('ExecuteController', () => {
