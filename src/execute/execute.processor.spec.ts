@@ -6,6 +6,7 @@ import { EventEmitter } from 'stream'
 
 import { ExecuteDto } from './execute.dto'
 import { ExecutionProcessorV1 } from './execute.processor'
+import { TracingOptions } from './execute.service'
 
 const VALID_PRIVATE_KEY =
   '0xc6cbd7d76bc5baca530c875663711b947efa6a86a900a9e8645ce32e5821484e'
@@ -13,13 +14,14 @@ const TOPOS_CORE_PROXY_CONTRACT_ADDRESS =
   '0x1D7b9f9b1FF6cf0A3BEB0F84fA6F8628E540E97F'
 const TOPOS_SUBNET_ENDPOINT = 'topos-subnet-endpoint'
 
-const validExecuteJob: Partial<Job<ExecuteDto>> = {
+const validExecuteJob: Partial<Job<ExecuteDto & TracingOptions>> = {
   data: {
     logIndexes: [],
     messagingContractAddress: '',
     receiptTrieRoot: '',
     receiptTrieMerkleProof: '',
     subnetId: 'id',
+    traceparent: '',
   },
   progress: jest.fn(),
 }
@@ -79,7 +81,7 @@ describe('ExecuteProcessor', () => {
       jest.spyOn<any, any>(ethers, 'Contract').mockReturnValue(contractMock)
 
       await executeProcessor.execute(
-        validExecuteJob as unknown as Job<ExecuteDto>
+        validExecuteJob as unknown as Job<ExecuteDto & TracingOptions>
       )
 
       expect(ethersProviderMock).toHaveBeenCalledWith(

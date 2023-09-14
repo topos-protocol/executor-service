@@ -3,6 +3,7 @@ import {
   Body,
   Controller,
   Get,
+  Headers,
   Param,
   Post,
   Sse,
@@ -22,10 +23,15 @@ export class ExecuteControllerV1 {
   @Post('execute')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
-  async executeV1(@Body() executeDto: ExecuteDto) {
-    return this.executeService.execute(executeDto).catch((error) => {
-      throw new BadRequestException(error.message)
-    })
+  async executeV1(
+    @Body() executeDto: ExecuteDto,
+    @Headers('traceparent') traceparent?: string
+  ) {
+    return this.executeService
+      .execute(executeDto, { traceparent })
+      .catch((error) => {
+        throw new BadRequestException(error.message)
+      })
   }
 
   @ApiTags('job')
@@ -42,7 +48,10 @@ export class ExecuteControllerV1 {
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @ApiParam({ name: 'jobId' })
-  async subscribeToJob(@Param('jobId') jobId: string) {
-    return this.executeService.subscribeToJobById(jobId)
+  async subscribeToJob(
+    @Param('jobId') jobId: string,
+    @Headers('traceparent') traceparent?: string
+  ) {
+    return this.executeService.subscribeToJobById(jobId, { traceparent })
   }
 }

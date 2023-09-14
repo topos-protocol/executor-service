@@ -4,7 +4,7 @@ import { ExecuteControllerV1 } from './execute.controller'
 import { ExecuteDto } from './execute.dto'
 import { QUEUE_ERRORS } from './execute.errors'
 import { ExecuteServiceV1 } from './execute.service'
-import { Observable, observable } from 'rxjs'
+import { Observable } from 'rxjs'
 
 const validExecuteDto: ExecuteDto = {
   logIndexes: [],

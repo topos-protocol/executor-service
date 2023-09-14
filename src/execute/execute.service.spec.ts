@@ -3,7 +3,7 @@ import { Test, TestingModule } from '@nestjs/testing'
 import { Job } from 'bull'
 
 import { ExecuteDto } from './execute.dto'
-import { ExecuteServiceV1 } from './execute.service'
+import { ExecuteServiceV1, TracingOptions } from './execute.service'
 import { ConfigService } from '@nestjs/config'
 import { first, firstValueFrom, lastValueFrom } from 'rxjs'
 
@@ -13,6 +13,10 @@ const validExecuteDto: ExecuteDto = {
   receiptTrieRoot: '',
   receiptTrieMerkleProof: '',
   subnetId: '',
+}
+
+const validTracingOptions: TracingOptions = {
+  traceparent: '',
 }
 
 const VALID_PRIVATE_KEY =
@@ -72,7 +76,7 @@ describe('ExecuteService', () => {
 
   describe('execute', () => {
     it('should call queue.add', () => {
-      executeService.execute(validExecuteDto)
+      executeService.execute(validExecuteDto, validTracingOptions)
 
       expect(executeQueueMock.add).toHaveBeenCalledWith(
         'execute',
@@ -95,7 +99,7 @@ describe('ExecuteService', () => {
     it('should retrieve the correct job', () => {
       const jobId = '1'
       executeService
-        .subscribeToJobById(jobId)
+        .subscribeToJobById(jobId, validTracingOptions)
         .pipe(first())
         .subscribe(() => {
           expect(executeQueueMock.getJob).toHaveBeenCalledWith(jobId)
@@ -106,7 +110,9 @@ describe('ExecuteService', () => {
     it('should first next some progress', async () => {
       const jobId = '1'
       await expect(
-        firstValueFrom(executeService.subscribeToJobById(jobId))
+        firstValueFrom(
+          executeService.subscribeToJobById(jobId, validTracingOptions)
+        )
       ).resolves.toStrictEqual({
         data: { payload: '', type: 'progress' },
       })
@@ -115,7 +121,9 @@ describe('ExecuteService', () => {
     it('should then complete', async () => {
       const jobId = '1'
       await expect(
-        lastValueFrom(executeService.subscribeToJobById(jobId))
+        lastValueFrom(
+          executeService.subscribeToJobById(jobId, validTracingOptions)
+        )
       ).resolves.toStrictEqual({
         data: { payload: {}, type: 'completed' },
       })
@@ -137,7 +145,9 @@ describe('ExecuteService', () => {
       )
 
       await expect(
-        lastValueFrom(executeService.subscribeToJobById(jobId))
+        lastValueFrom(
+          executeService.subscribeToJobById(jobId, validTracingOptions)
+        )
       ).rejects.toStrictEqual('errorMock')
     })
   })
