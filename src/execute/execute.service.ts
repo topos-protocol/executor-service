@@ -5,12 +5,12 @@ import { Queue } from 'bull'
 import { ethers } from 'ethers'
 import { Observable } from 'rxjs'
 
-import { apm } from '../main'
+import { ApmService } from '../apm/apm.service'
 import { ExecuteDto } from './execute.dto'
 import { QUEUE_ERRORS, WALLET_ERRORS } from './execute.errors'
 
 export interface TracingOptions {
-  traceparent: string
+  traceparent?: string
 }
 
 @Injectable()
@@ -19,16 +19,20 @@ export class ExecuteServiceV1 {
 
   constructor(
     private configService: ConfigService,
+    private apmService: ApmService,
     @InjectQueue('execute') private readonly executionQueue: Queue
   ) {
     this._verifyPrivateKey()
     this._verifyRedisAvailability()
   }
 
-  async execute(executeDto: ExecuteDto, { traceparent }: TracingOptions) {
-    const apmTransaction = apm.startTransaction('root-execute', {
-      childOf: traceparent,
-    })
+  async execute(executeDto: ExecuteDto, tracingOptions: TracingOptions) {
+    const traceparent = tracingOptions?.traceparent
+
+    const apmTransaction = this.apmService.startTransaction(
+      'root-execute',
+      traceparent
+    )
     const span = apmTransaction.startSpan(`add-execution-job`)
 
     const { id, timestamp, ...rest } = await this._addExecutionJob(executeDto, {
@@ -59,11 +63,13 @@ export class ExecuteServiceV1 {
     return job
   }
 
-  subscribeToJobById(jobId: string, { traceparent }: TracingOptions) {
+  subscribeToJobById(jobId: string, tracingOptions: TracingOptions) {
     return new Observable<MessageEvent>((subscriber) => {
-      const apmTransaction = apm.startTransaction('root-subscribe', {
-        childOf: traceparent,
-      })
+      const traceparent = tracingOptions?.traceparent
+      const apmTransaction = this.apmService.startTransaction(
+        'root-subscribe',
+        traceparent
+      )
       const span = apmTransaction.startSpan(`subscribe-to-job`)
       span.addLabels({ jobId })
 
@@ -86,7 +92,7 @@ export class ExecuteServiceV1 {
               subscriber.complete()
             })
             .catch((error) => {
-              apm.captureError(error)
+              this.apmService.captureError(error)
               this.logger.debug(`Job failed!`)
               this.logger.debug(error)
               subscriber.error(error)
@@ -97,7 +103,7 @@ export class ExecuteServiceV1 {
             })
         })
         .catch((error) => {
-          apm.captureError(error)
+          this.apmService.captureError(error)
           this.logger.debug(`Job not found!`)
           this.logger.debug(error)
           subscriber.error(error)

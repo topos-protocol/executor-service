@@ -3,6 +3,7 @@ import { Test } from '@nestjs/testing'
 import { INestApplication, ValidationPipe } from '@nestjs/common'
 
 import { AppModule } from '../src/app.module'
+import { ApmService } from '../src/apm/apm.service'
 import { JwtAuthGuard } from '../src/auth/jwt-auth.guard'
 import { ExecuteDto } from '../src/execute/execute.dto'
 import { ExecuteServiceV1 } from '../src/execute/execute.service'
@@ -10,19 +11,22 @@ import { ExecuteServiceV1 } from '../src/execute/execute.service'
 const validExecuteDto: ExecuteDto = {
   logIndexes: [],
   messagingContractAddress: '0x3B5aCC9B6e58543512828EFAe26B29B7292c8273',
-  receiptTrieRoot: 'txTrieRoot',
-  receiptTrieMerkleProof: 'txTrieMerkleProof',
+  receiptTrieRoot: 'receiptTrieRoot',
+  receiptTrieMerkleProof: 'receiptTrieMerkleProof',
   subnetId: 'subnetId',
 }
 
 describe('Execute with ❌ auth (e2e)', () => {
   let app: INestApplication
   let authGuard = { canActivate: jest.fn().mockReturnValue(false) }
+  let apmService = {}
 
   beforeAll(async () => {
     const moduleFixture = await Test.createTestingModule({
       imports: [AppModule],
     })
+      .overrideProvider(ApmService)
+      .useValue(apmService)
       .overrideGuard(JwtAuthGuard)
       .useValue(authGuard)
       .compile()

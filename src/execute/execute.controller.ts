@@ -12,7 +12,7 @@ import {
 import { ApiBearerAuth, ApiParam, ApiTags } from '@nestjs/swagger'
 
 import { ExecuteDto } from './execute.dto'
-import { ExecuteServiceV1 } from './execute.service'
+import { ExecuteServiceV1, TracingOptions } from './execute.service'
 import { JwtAuthGuard } from '../auth/jwt-auth.guard'
 
 @Controller({ version: '1' })
@@ -27,11 +27,13 @@ export class ExecuteControllerV1 {
     @Body() executeDto: ExecuteDto,
     @Headers('traceparent') traceparent?: string
   ) {
-    return this.executeService
-      .execute(executeDto, { traceparent })
-      .catch((error) => {
-        throw new BadRequestException(error.message)
-      })
+    const args: [ExecuteDto, TracingOptions?] = [executeDto]
+    if (traceparent) {
+      args.push({ traceparent })
+    }
+    return this.executeService.execute(...args).catch((error) => {
+      throw new BadRequestException(error.message)
+    })
   }
 
   @ApiTags('job')
@@ -52,6 +54,10 @@ export class ExecuteControllerV1 {
     @Param('jobId') jobId: string,
     @Headers('traceparent') traceparent?: string
   ) {
-    return this.executeService.subscribeToJobById(jobId, { traceparent })
+    const args: [string, TracingOptions?] = [jobId]
+    if (traceparent) {
+      args.push({ traceparent })
+    }
+    return this.executeService.subscribeToJobById(...args)
   }
 }

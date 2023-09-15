@@ -1,11 +1,12 @@
 import { BullModule, getQueueToken } from '@nestjs/bull'
+import { ConfigService } from '@nestjs/config'
 import { Test, TestingModule } from '@nestjs/testing'
 import { Job } from 'bull'
+import { first, firstValueFrom, lastValueFrom } from 'rxjs'
 
+import { ApmService } from '../apm/apm.service'
 import { ExecuteDto } from './execute.dto'
 import { ExecuteServiceV1, TracingOptions } from './execute.service'
-import { ConfigService } from '@nestjs/config'
-import { first, firstValueFrom, lastValueFrom } from 'rxjs'
 
 const validExecuteDto: ExecuteDto = {
   logIndexes: [],
@@ -66,6 +67,18 @@ describe('ExecuteService', () => {
             }),
           }
         }
+
+        if (token === ApmService) {
+          return {
+            captureError: jest.fn(),
+            startTransaction: jest.fn().mockReturnValue({
+              end: jest.fn(),
+              startSpan: jest
+                .fn()
+                .mockReturnValue({ addLabels: jest.fn(), end: jest.fn() }),
+            }),
+          }
+        }
       })
       .overrideProvider(getQueueToken('execute'))
       .useValue(executeQueueMock)
@@ -78,10 +91,10 @@ describe('ExecuteService', () => {
     it('should call queue.add', () => {
       executeService.execute(validExecuteDto, validTracingOptions)
 
-      expect(executeQueueMock.add).toHaveBeenCalledWith(
-        'execute',
-        validExecuteDto
-      )
+      expect(executeQueueMock.add).toHaveBeenCalledWith('execute', {
+        ...validExecuteDto,
+        ...validTracingOptions,
+      })
     })
   })
 

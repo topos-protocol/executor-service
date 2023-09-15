@@ -22,7 +22,7 @@ import {
 import { Job } from 'bull'
 import { ethers, providers } from 'ethers'
 
-import { apm } from '../main'
+import { ApmService } from '../apm/apm.service'
 import { sanitizeURLProtocol } from '../utils'
 import { ExecuteDto } from './execute.dto'
 import {
@@ -40,7 +40,10 @@ const UNDEFINED_CERTIFICATE_ID =
 export class ExecutionProcessorV1 {
   private readonly logger = new Logger(ExecutionProcessorV1.name)
 
-  constructor(private configService: ConfigService) {}
+  constructor(
+    private configService: ConfigService,
+    private apmService: ApmService
+  ) {}
 
   @Process('execute')
   async execute(job: Job<ExecuteDto & TracingOptions>) {
@@ -53,16 +56,17 @@ export class ExecutionProcessorV1 {
       traceparent,
     } = job.data
 
-    const apmTransaction = apm.startTransaction('root-processor', {
-      childOf: traceparent,
-    })
+    const apmTransaction = this.apmService.startTransaction(
+      'root-processor',
+      traceparent
+    )
     const executeSpan = apmTransaction.startSpan(`execute`)
     executeSpan.addLabels({ data: JSON.stringify(job.data) })
 
-    const toposCoreContractAddress = this.configService.get<string>(
+    const toposCoreProxyContractAddress = this.configService.get<string>(
       'TOPOS_CORE_PROXY_CONTRACT_ADDRESS'
     )
-    executeSpan.addLabels({ toposCoreContractAddress })
+    executeSpan.addLabels({ toposCoreProxyContractAddress })
 
     const receivingSubnetEndpoint =
       await this._getReceivingSubnetEndpointFromId(subnetId)
@@ -76,7 +80,7 @@ export class ExecutionProcessorV1 {
 
     const toposCoreContract = (await this._getContract(
       provider,
-      toposCoreContractAddress,
+      toposCoreProxyContractAddress,
       ToposCoreJSON.abi,
       wallet
     )) as ToposCore
@@ -103,7 +107,7 @@ export class ExecutionProcessorV1 {
 
     if (certId == UNDEFINED_CERTIFICATE_ID) {
       await job.moveToFailed({ message: JOB_ERRORS.MISSING_CERTIFICATE })
-      apm.captureError(JOB_ERRORS.MISSING_CERTIFICATE)
+      this.apmService.captureError(JOB_ERRORS.MISSING_CERTIFICATE)
       return
     }
 

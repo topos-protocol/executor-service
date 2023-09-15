@@ -4,6 +4,7 @@ import { Job } from 'bull'
 import { ethers } from 'ethers'
 import { EventEmitter } from 'stream'
 
+import { ApmService } from '../apm/apm.service'
 import { ExecuteDto } from './execute.dto'
 import { ExecutionProcessorV1 } from './execute.processor'
 import { TracingOptions } from './execute.service'
@@ -59,6 +60,18 @@ describe('ExecuteProcessor', () => {
                 case 'TOPOS_SUBNET_ENDPOINT':
                   return TOPOS_SUBNET_ENDPOINT
               }
+            }),
+          }
+        }
+
+        if (token === ApmService) {
+          return {
+            captureError: jest.fn(),
+            startTransaction: jest.fn().mockReturnValue({
+              end: jest.fn(),
+              startSpan: jest
+                .fn()
+                .mockReturnValue({ addLabels: jest.fn(), end: jest.fn() }),
             }),
           }
         }
