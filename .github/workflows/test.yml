@@ -22,6 +22,9 @@ jobs:
 
       - run: npm ci
       - run: npm run test
+        env:
+          ELASTIC_APM_ENDPOINT: ${{ secrets.ELASTIC_APM_ENDPOINT }}
+          ELASTIC_APM_TOKEN: ${{ secrets.ELASTIC_APM_TOKEN }}
 
   e2e-tests:
     name: E2E tests
@@ -42,3 +45,5 @@ jobs:
           REDIS_HOST: ${{ vars.REDIS_HOST }}
           REDIS_PORT: ${{ vars.REDIS_PORT }}
           PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
+          ELASTIC_APM_ENDPOINT: ${{ secrets.ELASTIC_APM_ENDPOINT }}
+          ELASTIC_APM_TOKEN: ${{ secrets.ELASTIC_APM_TOKEN }}

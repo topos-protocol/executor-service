@@ -22,6 +22,8 @@ import {
 import { Job } from 'bull'
 import { ethers, providers } from 'ethers'
 
+import { ApmService } from '../apm/apm.service'
+import { sanitizeURLProtocol } from '../utils'
 import { ExecuteDto } from './execute.dto'
 import {
   CONTRACT_ERRORS,
@@ -29,7 +31,7 @@ import {
   PROVIDER_ERRORS,
   WALLET_ERRORS,
 } from './execute.errors'
-import { sanitizeURLProtocol } from '../utils'
+import { TracingOptions } from './execute.service'
 
 const UNDEFINED_CERTIFICATE_ID =
   '0x0000000000000000000000000000000000000000000000000000000000000000'
@@ -38,33 +40,47 @@ const UNDEFINED_CERTIFICATE_ID =
 export class ExecutionProcessorV1 {
   private readonly logger = new Logger(ExecutionProcessorV1.name)
 
-  constructor(private configService: ConfigService) {}
+  constructor(
+    private configService: ConfigService,
+    private apmService: ApmService
+  ) {}
 
   @Process('execute')
-  async execute(job: Job<ExecuteDto>) {
+  async execute(job: Job<ExecuteDto & TracingOptions>) {
     const {
       logIndexes,
       messagingContractAddress,
       receiptTrieMerkleProof,
       receiptTrieRoot,
       subnetId,
+      traceparent,
     } = job.data
 
-    const toposCoreContractAddress = this.configService.get<string>(
+    const apmTransaction = this.apmService.startTransaction(
+      'root-processor',
+      traceparent
+    )
+    const executeSpan = apmTransaction.startSpan(`execute`)
+    executeSpan.addLabels({ data: JSON.stringify(job.data) })
+
+    const toposCoreProxyContractAddress = this.configService.get<string>(
       'TOPOS_CORE_PROXY_CONTRACT_ADDRESS'
     )
+    executeSpan.addLabels({ toposCoreProxyContractAddress })
 
     const receivingSubnetEndpoint =
       await this._getReceivingSubnetEndpointFromId(subnetId)
+    executeSpan.addLabels({ receivingSubnetEndpoint })
 
     const provider = await this._createProvider(receivingSubnetEndpoint)
     this.logger.debug(`ReceivingSubnet: ${receivingSubnetEndpoint}`)
+    executeSpan.addLabels({ provider: JSON.stringify(provider) })
 
     const wallet = this._createWallet(provider)
 
     const toposCoreContract = (await this._getContract(
       provider,
-      toposCoreContractAddress,
+      toposCoreProxyContractAddress,
       ToposCoreJSON.abi,
       wallet
     )) as ToposCore
@@ -91,8 +107,11 @@ export class ExecutionProcessorV1 {
 
     if (certId == UNDEFINED_CERTIFICATE_ID) {
       await job.moveToFailed({ message: JOB_ERRORS.MISSING_CERTIFICATE })
+      this.apmService.captureError(JOB_ERRORS.MISSING_CERTIFICATE)
       return
     }
+
+    executeSpan.addLabels({ certId })
 
     await job.progress(50)
 
@@ -105,7 +124,12 @@ export class ExecutionProcessorV1 {
       }
     )
 
+    executeSpan.addLabels({ tx: JSON.stringify(tx) })
+
     return tx.wait().then(async (receipt) => {
+      executeSpan.addLabels({ receipt: JSON.stringify(receipt) })
+      executeSpan.end()
+      apmTransaction.end()
       await job.progress(100)
       return receipt
     })

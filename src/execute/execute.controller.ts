@@ -3,6 +3,7 @@ import {
   Body,
   Controller,
   Get,
+  Headers,
   Param,
   Post,
   Sse,
@@ -11,7 +12,7 @@ import {
 import { ApiBearerAuth, ApiParam, ApiTags } from '@nestjs/swagger'
 
 import { ExecuteDto } from './execute.dto'
-import { ExecuteServiceV1 } from './execute.service'
+import { ExecuteServiceV1, TracingOptions } from './execute.service'
 import { JwtAuthGuard } from '../auth/jwt-auth.guard'
 
 @Controller({ version: '1' })
@@ -22,8 +23,15 @@ export class ExecuteControllerV1 {
   @Post('execute')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
-  async executeV1(@Body() executeDto: ExecuteDto) {
-    return this.executeService.execute(executeDto).catch((error) => {
+  async executeV1(
+    @Body() executeDto: ExecuteDto,
+    @Headers('traceparent') traceparent?: string
+  ) {
+    const args: [ExecuteDto, TracingOptions?] = [executeDto]
+    if (traceparent) {
+      args.push({ traceparent })
+    }
+    return this.executeService.execute(...args).catch((error) => {
       throw new BadRequestException(error.message)
     })
   }
@@ -42,7 +50,14 @@ export class ExecuteControllerV1 {
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @ApiParam({ name: 'jobId' })
-  async subscribeToJob(@Param('jobId') jobId: string) {
-    return this.executeService.subscribeToJobById(jobId)
+  async subscribeToJob(
+    @Param('jobId') jobId: string,
+    @Headers('traceparent') traceparent?: string
+  ) {
+    const args: [string, TracingOptions?] = [jobId]
+    if (traceparent) {
+      args.push({ traceparent })
+    }
+    return this.executeService.subscribeToJobById(...args)
   }
 }

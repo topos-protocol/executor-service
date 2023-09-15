@@ -1,24 +1,15 @@
 import { ValidationPipe } from '@nestjs/common'
-import { HttpAdapterHost, NestFactory } from '@nestjs/core'
+import { NestFactory } from '@nestjs/core'
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger'
 
 import { AppModule } from './app.module'
 import { ExecuteModuleV1 } from './execute/execute.module'
-import { AllExceptionsFilter } from './filters/all-exceptions.filter'
-import { HttpExceptionFilter } from './filters/http-exception.filter'
-import { otelSDK } from './tracing'
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule)
   app.enableVersioning()
   app.useGlobalPipes(new ValidationPipe())
   app.enableCors()
-
-  await otelSDK.start()
-
-  const httpAdapter = app.get(HttpAdapterHost)
-  // app.useGlobalFilters(new HttpExceptionFilter())
-  // app.useGlobalFilters(new AllExceptionsFilter(httpAdapter))
 
   const config = new DocumentBuilder()
     .setTitle('Topos Executor Service')

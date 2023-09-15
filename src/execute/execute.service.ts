@@ -5,8 +5,13 @@ import { Queue } from 'bull'
 import { ethers } from 'ethers'
 import { Observable } from 'rxjs'
 
+import { ApmService } from '../apm/apm.service'
 import { ExecuteDto } from './execute.dto'
 import { QUEUE_ERRORS, WALLET_ERRORS } from './execute.errors'
+
+export interface TracingOptions {
+  traceparent?: string
+}
 
 @Injectable()
 export class ExecuteServiceV1 {
@@ -14,14 +19,29 @@ export class ExecuteServiceV1 {
 
   constructor(
     private configService: ConfigService,
+    private apmService: ApmService,
     @InjectQueue('execute') private readonly executionQueue: Queue
   ) {
     this._verifyPrivateKey()
     this._verifyRedisAvailability()
   }
 
-  async execute(executeDto: ExecuteDto) {
-    const { id, timestamp, ...rest } = await this._addExecutionJob(executeDto)
+  async execute(executeDto: ExecuteDto, tracingOptions: TracingOptions) {
+    const traceparent = tracingOptions?.traceparent
+
+    const apmTransaction = this.apmService.startTransaction(
+      'root-execute',
+      traceparent
+    )
+    const span = apmTransaction.startSpan(`add-execution-job`)
+
+    const { id, timestamp, ...rest } = await this._addExecutionJob(executeDto, {
+      traceparent,
+    })
+    span.addLabels({ id, timestamp })
+
+    span.end()
+    apmTransaction.end()
     return { id, timestamp }
   }
 
@@ -43,8 +63,16 @@ export class ExecuteServiceV1 {
     return job
   }
 
-  subscribeToJobById(jobId: string) {
+  subscribeToJobById(jobId: string, tracingOptions: TracingOptions) {
     return new Observable<MessageEvent>((subscriber) => {
+      const traceparent = tracingOptions?.traceparent
+      const apmTransaction = this.apmService.startTransaction(
+        'root-subscribe',
+        traceparent
+      )
+      const span = apmTransaction.startSpan(`subscribe-to-job`)
+      span.addLabels({ jobId })
+
       this.getJobById(jobId)
         .then((job) => {
           const progressListener = (job, progress) => {
@@ -64,13 +92,18 @@ export class ExecuteServiceV1 {
               subscriber.complete()
             })
             .catch((error) => {
+              this.apmService.captureError(error)
               this.logger.debug(`Job failed!`)
               this.logger.debug(error)
               subscriber.error(error)
               subscriber.complete()
             })
+            .finally(() => {
+              span.end()
+            })
         })
         .catch((error) => {
+          this.apmService.captureError(error)
           this.logger.debug(`Job not found!`)
           this.logger.debug(error)
           subscriber.error(error)
@@ -79,9 +112,12 @@ export class ExecuteServiceV1 {
     })
   }
 
-  private async _addExecutionJob(executeDto: ExecuteDto) {
+  private async _addExecutionJob(
+    executeDto: ExecuteDto,
+    { traceparent }: TracingOptions
+  ) {
     try {
-      return this.executionQueue.add('execute', executeDto)
+      return this.executionQueue.add('execute', { ...executeDto, traceparent })
     } catch (error) {
       this.logger.error(error)
     }
