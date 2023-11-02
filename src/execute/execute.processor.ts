@@ -136,7 +136,7 @@ export class ExecutionProcessorV1 {
 
   private async _getReceivingSubnetEndpointFromId(subnetId: string) {
     const toposSubnetEndpoint = this.configService.get<string>(
-      'TOPOS_SUBNET_ENDPOINT'
+      'TOPOS_SUBNET_ENDPOINT_WS'
     )
     const toposCoreContractAddress = this.configService.get<string>(
       'TOPOS_CORE_PROXY_CONTRACT_ADDRESS'

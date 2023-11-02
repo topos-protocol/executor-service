@@ -13,7 +13,7 @@ const VALID_PRIVATE_KEY =
   '0xc6cbd7d76bc5baca530c875663711b947efa6a86a900a9e8645ce32e5821484e'
 const TOPOS_CORE_PROXY_CONTRACT_ADDRESS =
   '0x1D7b9f9b1FF6cf0A3BEB0F84fA6F8628E540E97F'
-const TOPOS_SUBNET_ENDPOINT = 'ws://topos-subnet-endpoint/ws'
+const TOPOS_SUBNET_ENDPOINT_WS = 'ws://topos-subnet-endpoint/ws'
 
 const validExecuteJob: Partial<Job<ExecuteDto & TracingOptions>> = {
   data: {
@@ -57,8 +57,8 @@ describe('ExecuteProcessor', () => {
                   return VALID_PRIVATE_KEY
                 case 'TOPOS_CORE_PROXY_CONTRACT_ADDRESS':
                   return TOPOS_CORE_PROXY_CONTRACT_ADDRESS
-                case 'TOPOS_SUBNET_ENDPOINT':
-                  return TOPOS_SUBNET_ENDPOINT
+                case 'TOPOS_SUBNET_ENDPOINT_WS':
+                  return TOPOS_SUBNET_ENDPOINT_WS
               }
             }),
           }
@@ -97,7 +97,7 @@ describe('ExecuteProcessor', () => {
         validExecuteJob as unknown as Job<ExecuteDto & TracingOptions>
       )
 
-      expect(ethersProviderMock).toHaveBeenCalledWith(TOPOS_SUBNET_ENDPOINT)
+      expect(ethersProviderMock).toHaveBeenCalledWith(TOPOS_SUBNET_ENDPOINT_WS)
       expect(ethersProviderMock).toHaveBeenCalledWith(subnetMock.endpointWs)
       expect(ethersWalletMock).toHaveBeenCalledWith(
         VALID_PRIVATE_KEY,
