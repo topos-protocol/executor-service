@@ -34,7 +34,7 @@
     "@nestjs/passport": "^9.0.0",
     "@nestjs/platform-express": "^9.4.0",
     "@nestjs/swagger": "^6.1.2",
-    "@topos-protocol/topos-smart-contracts": "^2.0.0-rc1",
+    "@topos-protocol/topos-smart-contracts": "^2.0.0",
     "bcrypt": "^5.1.0",
     "bull": "^4.10.1",
     "class-transformer": "^0.5.1",
