@@ -23,7 +23,6 @@ import { Job } from 'bull'
 import { ethers, providers } from 'ethers'
 
 import { ApmService } from '../apm/apm.service'
-import { sanitizeURLProtocol } from '../utils'
 import { ExecuteDto } from './execute.dto'
 import {
   CONTRACT_ERRORS,
@@ -137,7 +136,7 @@ export class ExecutionProcessorV1 {
 
   private async _getReceivingSubnetEndpointFromId(subnetId: string) {
     const toposSubnetEndpoint = this.configService.get<string>(
-      'TOPOS_SUBNET_ENDPOINT'
+      'TOPOS_SUBNET_ENDPOINT_WS'
     )
     const toposCoreContractAddress = this.configService.get<string>(
       'TOPOS_CORE_PROXY_CONTRACT_ADDRESS'
@@ -166,31 +165,36 @@ export class ExecutionProcessorV1 {
       )) as SubnetRegistrator
 
       const receivingSubnet = await subnetRegistratorContract.subnets(subnetId)
-      return receivingSubnet.endpoint
+      return receivingSubnet.endpointWs || receivingSubnet.endpointHttp
     }
   }
 
   private _createProvider(endpoint: string) {
-    return new Promise<providers.WebSocketProvider>((resolve, reject) => {
-      const provider = new ethers.providers.WebSocketProvider(
-        sanitizeURLProtocol('ws', `${endpoint}/ws`)
-      )
+    return new Promise<providers.WebSocketProvider | providers.JsonRpcProvider>(
+      (resolve, reject) => {
+        const url = new URL(endpoint)
+        const provider = url.protocol.startsWith('ws')
+          ? new providers.WebSocketProvider(endpoint)
+          : new providers.JsonRpcProvider(endpoint)
 
-      // Fix: Timeout to leave time to errors to be asynchronously caught
-      const timeoutId = setTimeout(() => {
-        resolve(provider)
-      }, 1000)
+        // Fix: Timeout to leave time to errors to be asynchronously caught
+        const timeoutId = setTimeout(() => {
+          resolve(provider)
+        }, 1000)
 
-      provider.on('debug', (data) => {
-        if (data.error) {
-          clearTimeout(timeoutId)
-          reject(new Error(PROVIDER_ERRORS.INVALID_ENDPOINT))
-        }
-      })
-    })
+        provider.on('debug', (data) => {
+          if (data.error) {
+            clearTimeout(timeoutId)
+            reject(new Error(PROVIDER_ERRORS.INVALID_ENDPOINT))
+          }
+        })
+      }
+    )
   }
 
-  private _createWallet(provider: providers.WebSocketProvider) {
+  private _createWallet(
+    provider: providers.WebSocketProvider | providers.JsonRpcProvider
+  ) {
     try {
       return new ethers.Wallet(
         this.configService.get<string>('PRIVATE_KEY'),
@@ -202,7 +206,7 @@ export class ExecutionProcessorV1 {
   }
 
   private async _getContract(
-    provider: providers.WebSocketProvider,
+    provider: providers.WebSocketProvider | providers.JsonRpcProvider,
     contractAddress: string,
     contractInterface: ethers.ContractInterface,
     wallet?: ethers.Wallet
