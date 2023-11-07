@@ -1,10 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing'
+import { Observable } from 'rxjs'
 
 import { ExecuteControllerV1 } from './execute.controller'
 import { ExecuteDto } from './execute.dto'
 import { QUEUE_ERRORS } from './execute.errors'
 import { ExecuteServiceV1 } from './execute.service'
-import { Observable } from 'rxjs'
 
 const validExecuteDto: ExecuteDto = {
   logIndexes: [],
@@ -28,7 +28,7 @@ describe('ExecuteController', () => {
           return {
             execute: jest.fn().mockResolvedValue({}),
             getJobById: jest.fn().mockResolvedValue({}),
-            subscribeToJobById: jest.fn().mockResolvedValue({}),
+            subscribeToJobById: jest.fn().mockReturnValue({ pipe: jest.fn() }),
           }
         }
       })

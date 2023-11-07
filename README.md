@@ -33,17 +33,6 @@ The Executor Service requires a local environment to be set up.
 
 Create an `.env` at the root of the project, with the content of `.env.example`, and fill the revelant env var values.
 
-```
-AUTH0_AUDIENCE=
-AUTH0_ISSUER_URL=
-REDIS_HOST=
-REDIS_PORT=
-TOPOS_SUBNET_ENDPOINT_WS=
-SUBNET_REGISTRATOR_CONTRACT_ADDRESS=
-TOPOS_CORE_PROXY_CONTRACT_ADDRESS=
-ERC20_MESSAGING_CONTRACT_ADDRESS=
-```
-
 ### Authentication (Auth0)
 
 The Executor Service leverages [Auth0](https://auth0.com/) for machine-to-machine authentication and authorization. We use Auth0's machine-to-machine service as we are not authenticating/authorizing users but applications (e.g., dApp frontends) that will use the Executor Service as a call delegation for their users' cross-subnet messages.
