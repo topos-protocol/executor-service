@@ -8,7 +8,7 @@ import { Observable } from 'rxjs'
 
 import { ExecuteDto } from './execute.dto'
 import { QUEUE_ERRORS, WALLET_ERRORS } from './execute.errors'
-import { getErrorMessage } from 'src/utils'
+import { getErrorMessage } from '../utils'
 
 export interface TracingOptions {
   traceparent: string
@@ -71,11 +71,15 @@ export class ExecuteServiceV1 {
           throw new Error(QUEUE_ERRORS.JOB_NOT_FOUND)
         }
 
-        span.setStatus({ code: SpanStatusCode.ERROR })
+        span.setStatus({
+          code: SpanStatusCode.ERROR,
+          message: failedJob.failedReason,
+        })
         span.end()
         return failedJob
       }
 
+      span.setAttribute('job', JSON.stringify(job))
       span.setStatus({ code: SpanStatusCode.OK })
       span.end()
       return job
@@ -87,47 +91,52 @@ export class ExecuteServiceV1 {
       return new Observable<MessageEvent>((subscriber) => {
         span.setAttribute('jobId', jobId)
 
-        this.getJobById(jobId)
-          .then((job) => {
-            const progressListener = (job, progress) => {
-              if (job.id === jobId) {
-                this.logger.debug(`Job progress: ${progress}`)
-                span.addEvent('got progress update', { progress })
-                subscriber.next({
-                  data: { payload: progress, type: 'progress' },
-                })
+        context.with(trace.setSpan(context.active(), span), async () => {
+          this.getJobById(jobId)
+            .then((job) => {
+              const progressListener = (job, progress) => {
+                if (job.id === jobId) {
+                  this.logger.debug(`Job progress: ${progress}`)
+                  span.addEvent('got progress update', { progress })
+                  subscriber.next({
+                    data: { payload: progress, type: 'progress' },
+                  })
+                }
               }
-            }
 
-            this.executionQueue.on('progress', progressListener)
-            job
-              .finished()
-              .then((payload) => {
-                this.logger.debug(`Job completed!`)
-                this.executionQueue.removeListener('progress', progressListener)
-                span.setStatus({ code: SpanStatusCode.OK })
-                subscriber.next({ data: { payload, type: 'completed' } })
-                subscriber.complete()
-              })
-              .catch((error) => {
-                this.logger.debug(`Job failed!`)
-                this.logger.debug(error)
-                span.setStatus({ code: SpanStatusCode.ERROR, message: error })
-                subscriber.error(error)
-                subscriber.complete()
-              })
-              .finally(() => {
-                span.end()
-              })
-          })
-          .catch((error) => {
-            this.logger.debug(`Job not found!`)
-            this.logger.debug(error)
-            span.setStatus({ code: SpanStatusCode.ERROR, message: error })
-            span.end()
-            subscriber.error(error)
-            subscriber.complete()
-          })
+              this.executionQueue.on('progress', progressListener)
+              job
+                .finished()
+                .then((payload) => {
+                  this.logger.debug(`Job completed!`)
+                  this.executionQueue.removeListener(
+                    'progress',
+                    progressListener
+                  )
+                  span.setStatus({ code: SpanStatusCode.OK })
+                  subscriber.next({ data: { payload, type: 'completed' } })
+                  subscriber.complete()
+                })
+                .catch((error) => {
+                  this.logger.debug(`Job failed!`)
+                  this.logger.debug(error)
+                  span.setStatus({ code: SpanStatusCode.ERROR, message: error })
+                  subscriber.error(error)
+                  subscriber.complete()
+                })
+                .finally(() => {
+                  span.end()
+                })
+            })
+            .catch((error) => {
+              this.logger.debug(`Job not found!`)
+              this.logger.debug(error)
+              span.setStatus({ code: SpanStatusCode.ERROR, message: error })
+              span.end()
+              subscriber.error(error)
+              subscriber.complete()
+            })
+        })
       })
     })
   }

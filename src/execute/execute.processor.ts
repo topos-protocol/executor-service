@@ -29,7 +29,7 @@ import {
 import { Job } from 'bull'
 import { Contract, ethers, providers } from 'ethers'
 
-import { getErrorMessage, sanitizeURLProtocol } from '../utils'
+import { getErrorMessage } from '../utils'
 import { ExecuteDto } from './execute.dto'
 import {
   CONTRACT_ERRORS,

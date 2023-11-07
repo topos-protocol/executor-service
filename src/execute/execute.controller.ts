@@ -16,12 +16,12 @@ import {
   SpanStatusCode,
   trace,
 } from '@opentelemetry/api'
+import { tap } from 'rxjs'
 
+import { JwtAuthGuard } from '../auth/jwt-auth.guard'
+import { getErrorMessage } from '../utils'
 import { ExecuteDto } from './execute.dto'
 import { ExecuteServiceV1, TracingOptions } from './execute.service'
-import { JwtAuthGuard } from '../auth/jwt-auth.guard'
-import { finalize, tap } from 'rxjs'
-import { getErrorMessage } from 'src/utils'
 
 @Controller({ version: '1' })
 export class ExecuteControllerV1 {
@@ -115,6 +115,7 @@ export class ExecuteControllerV1 {
               span.end()
             },
             complete: () => {
+              span.setStatus({ code: SpanStatusCode.OK })
               span.end()
             },
           })

@@ -4,7 +4,6 @@ import { Job } from 'bull'
 import { ethers } from 'ethers'
 import { EventEmitter } from 'stream'
 
-import { ApmService } from '../apm/apm.service'
 import { ExecuteDto } from './execute.dto'
 import { ExecutionProcessorV1 } from './execute.processor'
 import { TracingOptions } from './execute.service'
@@ -15,15 +14,21 @@ const TOPOS_CORE_PROXY_CONTRACT_ADDRESS =
   '0x1D7b9f9b1FF6cf0A3BEB0F84fA6F8628E540E97F'
 const TOPOS_SUBNET_ENDPOINT_WS = 'ws://topos-subnet-endpoint/ws'
 
-const validExecuteJob: Partial<Job<ExecuteDto & TracingOptions>> = {
+const validExecuteJob: Partial<
+  Job<ExecuteDto & { tracingOptions: TracingOptions }>
+> = {
   data: {
     logIndexes: [],
     messagingContractAddress: '',
     receiptTrieRoot: '',
     receiptTrieMerkleProof: '',
     subnetId: 'id',
-    traceparent: '',
+    tracingOptions: {
+      traceparent: '',
+      tracestate: '',
+    },
   },
+  moveToFailed: jest.fn(),
   progress: jest.fn(),
 }
 
@@ -37,7 +42,7 @@ const contractMock = {
   execute: jest.fn().mockResolvedValue(transactionMock),
   networkSubnetId: jest.fn().mockResolvedValue(''),
   subnets: jest.fn().mockResolvedValue(subnetMock),
-  txRootToCertId: jest.fn().mockResolvedValue(''),
+  receiptRootToCertId: jest.fn().mockResolvedValue(''),
 }
 
 describe('ExecuteProcessor', () => {
@@ -50,8 +55,9 @@ describe('ExecuteProcessor', () => {
     })
       .useMocker((token) => {
         if (token === ConfigService) {
-          return {
-            get: jest.fn().mockImplementation((key: string) => {
+          const configGetterMock = jest
+            .fn()
+            .mockImplementation((key: string) => {
               switch (key) {
                 case 'PRIVATE_KEY':
                   return VALID_PRIVATE_KEY
@@ -60,19 +66,10 @@ describe('ExecuteProcessor', () => {
                 case 'TOPOS_SUBNET_ENDPOINT_WS':
                   return TOPOS_SUBNET_ENDPOINT_WS
               }
-            }),
-          }
-        }
-
-        if (token === ApmService) {
+            })
           return {
-            captureError: jest.fn(),
-            startTransaction: jest.fn().mockReturnValue({
-              end: jest.fn(),
-              startSpan: jest
-                .fn()
-                .mockReturnValue({ addLabels: jest.fn(), end: jest.fn() }),
-            }),
+            get: configGetterMock,
+            getOrThrow: configGetterMock,
           }
         }
       })
@@ -94,7 +91,9 @@ describe('ExecuteProcessor', () => {
       jest.spyOn<any, any>(ethers, 'Contract').mockReturnValue(contractMock)
 
       await executeProcessor.execute(
-        validExecuteJob as unknown as Job<ExecuteDto & TracingOptions>
+        validExecuteJob as unknown as Job<
+          ExecuteDto & { tracingOptions: TracingOptions }
+        >
       )
 
       expect(ethersProviderMock).toHaveBeenCalledWith(TOPOS_SUBNET_ENDPOINT_WS)
@@ -104,7 +103,7 @@ describe('ExecuteProcessor', () => {
         providerMock
       )
 
-      expect(contractMock.txRootToCertId).toHaveBeenCalled()
+      expect(contractMock.receiptRootToCertId).toHaveBeenCalled()
 
       expect(validExecuteJob.progress).toHaveBeenCalledWith(50)
 

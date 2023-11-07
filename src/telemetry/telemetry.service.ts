@@ -29,7 +29,6 @@ export class TelemetryService {
         exporter: new OTLPMetricExporter({
           url: `${OTEL_EXPORTER_OTLP_ENDPOINT}/v1/metrics`,
         }),
-        exportIntervalMillis: 5000,
       }),
       instrumentations: [],
     })
