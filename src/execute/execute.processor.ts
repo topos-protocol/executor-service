@@ -9,7 +9,7 @@ import {
   Process,
   Processor,
 } from '@nestjs/bull'
-import { Logger } from '@nestjs/common'
+import { Inject } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import {
   context,
@@ -27,16 +27,12 @@ import {
   ToposMessaging,
 } from '@topos-protocol/topos-smart-contracts/typechain-types/contracts/topos-core'
 import { Job } from 'bull'
-import { Contract, ethers, providers } from 'ethers'
+import { ethers, providers } from 'ethers'
+import { WinstonLogger, WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston'
 
 import { getErrorMessage } from '../utils'
 import { ExecuteDto } from './execute.dto'
-import {
-  CONTRACT_ERRORS,
-  JOB_ERRORS,
-  PROVIDER_ERRORS,
-  WALLET_ERRORS,
-} from './execute.errors'
+import { CONTRACT_ERRORS, JOB_ERRORS, PROVIDER_ERRORS } from './execute.errors'
 import { TracingOptions } from './execute.service'
 
 const UNDEFINED_CERTIFICATE_ID =
@@ -44,14 +40,18 @@ const UNDEFINED_CERTIFICATE_ID =
 
 @Processor('execute')
 export class ExecutionProcessorV1 {
-  private _tracer = trace.getTracer('ExecuteProcessor')
-  private _meter = metrics.getMeter('ExecuteProcessor')
+  private _tracer = trace.getTracer(ExecutionProcessorV1.name)
+  private _meter = metrics.getMeter(ExecutionProcessorV1.name)
   private _counterExecute = this._meter.createCounter(
     'execute_processor.execute.counter'
   )
-  private readonly logger = new Logger(ExecutionProcessorV1.name)
 
-  constructor(private configService: ConfigService) {}
+  constructor(
+    private configService: ConfigService,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: WinstonLogger
+  ) {
+    logger.setContext(ExecutionProcessorV1.name)
+  }
 
   @Process('execute')
   async execute(job: Job<ExecuteDto & { tracingOptions: TracingOptions }>) {

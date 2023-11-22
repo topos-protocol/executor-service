@@ -1,7 +1,8 @@
 import { InjectQueue } from '@nestjs/bull'
-import { Injectable, Logger, MessageEvent } from '@nestjs/common'
+import { Inject, Injectable, MessageEvent } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
-import { context, propagation, SpanStatusCode, trace } from '@opentelemetry/api'
+import { WinstonLogger, WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston'
+import { context, SpanStatusCode, trace } from '@opentelemetry/api'
 import { Queue } from 'bull'
 import { ethers } from 'ethers'
 import { Observable } from 'rxjs'
@@ -17,13 +18,15 @@ export interface TracingOptions {
 
 @Injectable()
 export class ExecuteServiceV1 {
-  private _tracer = trace.getTracer('ExecuteService')
-  private readonly logger = new Logger(ExecuteServiceV1.name)
+  private _tracer = trace.getTracer(ExecuteServiceV1.name)
 
   constructor(
     private configService: ConfigService,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: WinstonLogger,
     @InjectQueue('execute') private readonly executionQueue: Queue
   ) {
+    logger.setContext(ExecuteServiceV1.name)
     this._verifyPrivateKey()
     this._verifyRedisAvailability()
   }

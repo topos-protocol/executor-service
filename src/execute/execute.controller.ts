@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Headers,
+  Inject,
   Param,
   Post,
   Sse,
@@ -18,6 +19,8 @@ import {
 } from '@opentelemetry/api'
 import { tap } from 'rxjs'
 
+import { WINSTON_MODULE_NEST_PROVIDER, WinstonLogger } from 'nest-winston'
+
 import { JwtAuthGuard } from '../auth/jwt-auth.guard'
 import { getErrorMessage } from '../utils'
 import { ExecuteDto } from './execute.dto'
@@ -25,16 +28,21 @@ import { ExecuteServiceV1, TracingOptions } from './execute.service'
 
 @Controller({ version: '1' })
 export class ExecuteControllerV1 {
-  private _tracer = trace.getTracer('ExecuteController')
-  private _meter = metrics.getMeter('ExecuteController')
-  private _counterExecute = this._meter.createCounter(
-    'execute_controller.execute.counter'
-  )
+  private _tracer = trace.getTracer(ExecuteControllerV1.name)
+  private _meter = metrics.getMeter(ExecuteControllerV1.name)
+  private _counterExecute = this._meter.createCounter('execute.counter')
   private _counterGetJob = this._meter.createCounter('getJob.counter')
   private _counterSubscribeToJob = this._meter.createCounter(
     'subscribeToJob.counter'
   )
-  constructor(private executeService: ExecuteServiceV1) {}
+  constructor(
+    private executeService: ExecuteServiceV1,
+    // Using because of WINSTON_MODULE_NEST_PROVIDER and LoggerService
+    // https://github.com/gremo/nest-winston/issues/122#issuecomment-802714289
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: WinstonLogger
+  ) {
+    logger.setContext(ExecuteControllerV1.name)
+  }
 
   @ApiTags('execute')
   @Post('execute')
@@ -50,6 +58,7 @@ export class ExecuteControllerV1 {
     @Headers('traceparent') traceparent?: string,
     @Headers('tracestate') tracestate?: string
   ) {
+    this.logger.debug('executeV1()')
     this._counterExecute.add(1)
 
     const activeContext = propagation.extract(context.active(), {

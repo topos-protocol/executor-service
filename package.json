@@ -45,12 +45,15 @@
     "elastic-apm-node": "^4.0.0",
     "ethers": "^5.7.1",
     "jwks-rsa": "^2.1.5",
+    "nest-winston": "^1.9.4",
     "passport": "^0.6.0",
     "passport-headerapikey": "^1.2.2",
     "passport-jwt": "^4.0.0",
     "passport-local": "^1.0.0",
     "reflect-metadata": "^0.1.13",
-    "rxjs": "^7.5.5"
+    "rxjs": "^7.5.5",
+    "winston": "^3.11.0",
+    "winston-loki": "^6.0.8"
   },
   "devDependencies": {
     "@nestjs/cli": "^9.0.0",

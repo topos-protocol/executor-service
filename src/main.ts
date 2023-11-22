@@ -1,12 +1,14 @@
 import { ValidationPipe } from '@nestjs/common'
 import { NestFactory } from '@nestjs/core'
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger'
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston'
 
 import { AppModule } from './app.module'
 import { ExecuteModuleV1 } from './execute/execute.module'
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule)
+  const app = await NestFactory.create(AppModule, { bufferLogs: true })
+  app.useLogger(app.get(WINSTON_MODULE_NEST_PROVIDER))
   app.enableVersioning()
   app.useGlobalPipes(new ValidationPipe())
   app.enableCors()

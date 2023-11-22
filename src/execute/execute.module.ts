@@ -1,6 +1,5 @@
 import { BullModule } from '@nestjs/bull'
 import { Module } from '@nestjs/common'
-import { ConfigService } from '@nestjs/config'
 
 import { AuthModule } from '../auth/auth.module'
 import { ExecuteControllerV1 } from './execute.controller'
@@ -10,6 +9,6 @@ import { ExecuteServiceV1 } from './execute.service'
 @Module({
   controllers: [ExecuteControllerV1],
   imports: [BullModule.registerQueue({ name: 'execute' }), AuthModule],
-  providers: [ExecutionProcessorV1, ExecuteServiceV1, ConfigService],
+  providers: [ExecutionProcessorV1, ExecuteServiceV1],
 })
 export class ExecuteModuleV1 {}
