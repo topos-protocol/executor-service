@@ -18,25 +18,16 @@ import {
   SpanStatusCode,
   trace,
 } from '@opentelemetry/api'
-import * as ToposCoreJSON from '@topos-protocol/topos-smart-contracts/artifacts/contracts/topos-core/ToposCore.sol/ToposCore.json'
-import * as ToposMessagingJSON from '@topos-protocol/topos-smart-contracts/artifacts/contracts/topos-core/ToposMessaging.sol/ToposMessaging.json'
-import * as SubnetRegistratorJSON from '@topos-protocol/topos-smart-contracts/artifacts/contracts/topos-core/SubnetRegistrator.sol/SubnetRegistrator.json'
-import {
-  SubnetRegistrator,
-  ToposCore,
-  ToposMessaging,
-} from '@topos-protocol/topos-smart-contracts/typechain-types/contracts/topos-core'
+import { ToposCore } from '@topos-protocol/topos-smart-contracts/typechain-types/contracts/topos-core/ToposCore'
+import { ToposCore__factory } from '@topos-protocol/topos-smart-contracts/typechain-types/factories/contracts/topos-core/ToposCore__factory'
+import { SubnetRegistrator__factory } from '@topos-protocol/topos-smart-contracts/typechain-types/factories/contracts/topos-core/SubnetRegistrator__factory'
+import { ToposMessaging__factory } from '@topos-protocol/topos-smart-contracts/typechain-types/factories/contracts/topos-core/ToposMessaging__factory'
 import { Job } from 'bull'
-import { Contract, ethers, providers } from 'ethers'
+import { getDefaultProvider, Provider, Wallet } from 'ethers'
 
 import { getErrorMessage } from '../utils'
 import { ExecuteDto } from './execute.dto'
-import {
-  CONTRACT_ERRORS,
-  JOB_ERRORS,
-  PROVIDER_ERRORS,
-  WALLET_ERRORS,
-} from './execute.errors'
+import { JOB_ERRORS, PROVIDER_ERRORS } from './execute.errors'
 import { TracingOptions } from './execute.service'
 
 const UNDEFINED_CERTIFICATE_ID =
@@ -91,25 +82,22 @@ export class ExecutionProcessorV1 {
 
           const provider = await this._createProvider(receivingSubnetEndpoint)
           this.logger.debug(`ReceivingSubnet: ${receivingSubnetEndpoint}`)
+
           span.addEvent('got provider', {
             provider: JSON.stringify(provider),
           })
 
           const wallet = this._createWallet(provider)
 
-          const toposCoreContract = (await this._getContract(
-            provider,
+          const toposCoreContract = ToposCore__factory.connect(
             toposCoreProxyContractAddress,
-            ToposCoreJSON.abi,
             wallet
-          )) as ToposCore
+          )
 
-          const messagingContract = (await this._getContract(
-            provider,
+          const messagingContract = ToposMessaging__factory.connect(
             messagingContractAddress,
-            ToposMessagingJSON.abi,
             wallet
-          )) as ToposMessaging
+          )
 
           this.logger.debug(`Trie root: ${receiptTrieRoot}`)
 
@@ -169,10 +157,9 @@ export class ExecutionProcessorV1 {
 
     const provider = await this._createProvider(toposSubnetEndpoint)
 
-    const toposCoreContract = await this._getContract(
-      provider,
+    const toposCoreContract = ToposCore__factory.connect(
       toposCoreContractAddress,
-      ToposCoreJSON.abi
+      provider
     )
 
     const toposSubnetId = await toposCoreContract.networkSubnetId()
@@ -180,11 +167,10 @@ export class ExecutionProcessorV1 {
     if (subnetId === toposSubnetId) {
       return toposSubnetEndpoint
     } else {
-      const subnetRegistratorContract = (await this._getContract(
-        provider,
+      const subnetRegistratorContract = SubnetRegistrator__factory.connect(
         subnetRegistratorContractAddress,
-        SubnetRegistratorJSON.abi
-      )) as SubnetRegistrator
+        provider
+      )
 
       const receivingSubnet = await subnetRegistratorContract.subnets(subnetId)
       return receivingSubnet.endpointWs || receivingSubnet.endpointHttp
@@ -192,56 +178,26 @@ export class ExecutionProcessorV1 {
   }
 
   private _createProvider(endpoint: string) {
-    return new Promise<providers.WebSocketProvider | providers.JsonRpcProvider>(
-      (resolve, reject) => {
-        const url = new URL(endpoint)
-        const provider = url.protocol.startsWith('ws')
-          ? new providers.WebSocketProvider(endpoint)
-          : new providers.JsonRpcProvider(endpoint)
+    return new Promise<Provider>((resolve, reject) => {
+      const provider = getDefaultProvider(endpoint)
 
-        // Fix: Timeout to leave time to errors to be asynchronously caught
-        const timeoutId = setTimeout(() => {
-          resolve(provider)
-        }, 1000)
+      // Fix: Timeout to leave time to errors to be asynchronously caught
+      const timeoutId = setTimeout(() => {
+        resolve(provider)
+      }, 1000)
 
-        provider.on('debug', (data) => {
-          if (data.error) {
-            clearTimeout(timeoutId)
-            reject(new Error(PROVIDER_ERRORS.INVALID_ENDPOINT))
-          }
-        })
-      }
-    )
+      provider.on('debug', (data) => {
+        if (data.error) {
+          clearTimeout(timeoutId)
+          reject(new Error(PROVIDER_ERRORS.INVALID_ENDPOINT))
+        }
+      })
+    })
   }
 
-  private _createWallet(
-    provider: providers.WebSocketProvider | providers.JsonRpcProvider
-  ) {
+  private _createWallet(provider: Provider) {
     const privateKey = this.configService.getOrThrow('PRIVATE_KEY')
-    return new ethers.Wallet(privateKey, provider)
-  }
-
-  private async _getContract(
-    provider: providers.WebSocketProvider | providers.JsonRpcProvider,
-    contractAddress: string,
-    contractInterface: ethers.ContractInterface,
-    wallet?: ethers.Wallet
-  ) {
-    try {
-      const code = await provider.getCode(contractAddress)
-
-      if (code === '0x') {
-        throw new Error()
-      }
-
-      return new ethers.Contract(
-        contractAddress,
-        contractInterface,
-        wallet || provider
-      )
-    } catch (error) {
-      throw new Error(CONTRACT_ERRORS.INVALID_CONTRACT)
-    }
+    return new Wallet(privateKey, provider)
   }
 
   private async _findMatchingCertificate(
