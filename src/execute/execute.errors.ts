@@ -2,6 +2,10 @@ export enum PROVIDER_ERRORS {
   INVALID_ENDPOINT = 'Provider // Invalid endpoint!',
 }
 
+export enum CONTRACT_ERRORS {
+  INVALID_CONTRACT = 'Contract // Invalid contract!',
+}
+
 export enum WALLET_ERRORS {
   INVALID_PRIVATE_KEY = 'Wallet // Invalid private key!',
 }

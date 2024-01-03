@@ -87,7 +87,7 @@ describe('ExecuteProcessor', () => {
     it('should go through if processed job is valid', async () => {
       const ethersProviderMock = jest
         .spyOn<any, any>(ethers, 'getDefaultProvider')
-        .mockImplementation(() => providerMock)
+        .mockReturnValue(providerMock)
 
       const ethersWalletMock = jest
         .spyOn<any, any>(ethers, 'Wallet')

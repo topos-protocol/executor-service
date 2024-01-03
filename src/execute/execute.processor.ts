@@ -18,16 +18,26 @@ import {
   SpanStatusCode,
   trace,
 } from '@opentelemetry/api'
-import { ToposCore } from '@topos-protocol/topos-smart-contracts/typechain-types/contracts/topos-core/ToposCore'
-import { ToposCore__factory } from '@topos-protocol/topos-smart-contracts/typechain-types/factories/contracts/topos-core/ToposCore__factory'
-import { SubnetRegistrator__factory } from '@topos-protocol/topos-smart-contracts/typechain-types/factories/contracts/topos-core/SubnetRegistrator__factory'
-import { ToposMessaging__factory } from '@topos-protocol/topos-smart-contracts/typechain-types/factories/contracts/topos-core/ToposMessaging__factory'
+import {
+  SubnetRegistrator,
+  ToposCore,
+  ToposMessaging,
+} from '@topos-protocol/topos-smart-contracts/typechain-types'
+import * as ToposCoreJSON from '@topos-protocol/topos-smart-contracts/artifacts/contracts/topos-core/ToposCore.sol/ToposCore.json'
+import * as ToposMessagingJSON from '@topos-protocol/topos-smart-contracts/artifacts/contracts/topos-core/ToposMessaging.sol/ToposMessaging.json'
+import * as SubnetRegistratorJSON from '@topos-protocol/topos-smart-contracts/artifacts/contracts/topos-core/SubnetRegistrator.sol/SubnetRegistrator.json'
 import { Job } from 'bull'
-import { getDefaultProvider, Provider, Wallet } from 'ethers'
+import {
+  Contract,
+  getDefaultProvider,
+  InterfaceAbi,
+  Provider,
+  Wallet,
+} from 'ethers'
 
 import { getErrorMessage } from '../utils'
 import { ExecuteDto } from './execute.dto'
-import { JOB_ERRORS, PROVIDER_ERRORS } from './execute.errors'
+import { CONTRACT_ERRORS, JOB_ERRORS, PROVIDER_ERRORS } from './execute.errors'
 import { TracingOptions } from './execute.service'
 
 const UNDEFINED_CERTIFICATE_ID =
@@ -89,15 +99,19 @@ export class ExecutionProcessorV1 {
 
           const wallet = this._createWallet(provider)
 
-          const toposCoreContract = ToposCore__factory.connect(
+          const toposCoreContract = (await this._getContract(
+            provider,
             toposCoreProxyContractAddress,
+            ToposCoreJSON.abi,
             wallet
-          )
+          )) as unknown as ToposCore
 
-          const messagingContract = ToposMessaging__factory.connect(
+          const messagingContract = (await this._getContract(
+            provider,
             messagingContractAddress,
+            ToposMessagingJSON.abi,
             wallet
-          )
+          )) as unknown as ToposMessaging
 
           this.logger.debug(`Trie root: ${receiptTrieRoot}`)
 
@@ -157,20 +171,22 @@ export class ExecutionProcessorV1 {
 
     const provider = await this._createProvider(toposSubnetEndpoint)
 
-    const toposCoreContract = ToposCore__factory.connect(
+    const toposCoreContract = (await this._getContract(
+      provider,
       toposCoreContractAddress,
-      provider
-    )
+      ToposCoreJSON.abi
+    )) as unknown as ToposCore
 
     const toposSubnetId = await toposCoreContract.networkSubnetId()
 
     if (subnetId === toposSubnetId) {
       return toposSubnetEndpoint
     } else {
-      const subnetRegistratorContract = SubnetRegistrator__factory.connect(
+      const subnetRegistratorContract = (await this._getContract(
+        provider,
         subnetRegistratorContractAddress,
-        provider
-      )
+        SubnetRegistratorJSON.abi
+      )) as unknown as SubnetRegistrator
 
       const receivingSubnet = await subnetRegistratorContract.subnets(subnetId)
       return receivingSubnet.endpointWs || receivingSubnet.endpointHttp
@@ -198,6 +214,29 @@ export class ExecutionProcessorV1 {
   private _createWallet(provider: Provider) {
     const privateKey = this.configService.getOrThrow('PRIVATE_KEY')
     return new Wallet(privateKey, provider)
+  }
+
+  private async _getContract(
+    provider: Provider,
+    contractAddress: string,
+    contractInterfaceAbi: InterfaceAbi,
+    wallet?: Wallet
+  ) {
+    try {
+      const code = await provider.getCode(contractAddress)
+
+      if (code === '0x') {
+        throw new Error()
+      }
+
+      return new Contract(
+        contractAddress,
+        contractInterfaceAbi,
+        wallet || provider
+      )
+    } catch (error) {
+      throw new Error(CONTRACT_ERRORS.INVALID_CONTRACT)
+    }
   }
 
   private async _findMatchingCertificate(
