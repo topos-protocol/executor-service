@@ -93,15 +93,7 @@ describe('ExecuteProcessor', () => {
         .spyOn<any, any>(ethers, 'Wallet')
         .mockReturnValue(walletMock)
 
-      jest
-        .spyOn<any, any>(SubnetRegistrator__factory, 'connect')
-        .mockReturnValue(contractMock)
-      jest
-        .spyOn<any, any>(ToposCore__factory, 'connect')
-        .mockReturnValue(contractMock)
-      jest
-        .spyOn<any, any>(ToposMessaging__factory, 'connect')
-        .mockReturnValue(contractMock)
+      jest.spyOn<any, any>(ethers, 'Contract').mockReturnValue(contractMock)
 
       await executeProcessor.execute(
         validExecuteJob as unknown as Job<
