@@ -18,25 +18,26 @@ import {
   SpanStatusCode,
   trace,
 } from '@opentelemetry/api'
-import * as ToposCoreJSON from '@topos-protocol/topos-smart-contracts/artifacts/contracts/topos-core/ToposCore.sol/ToposCore.json'
-import * as ToposMessagingJSON from '@topos-protocol/topos-smart-contracts/artifacts/contracts/topos-core/ToposMessaging.sol/ToposMessaging.json'
-import * as SubnetRegistratorJSON from '@topos-protocol/topos-smart-contracts/artifacts/contracts/topos-core/SubnetRegistrator.sol/SubnetRegistrator.json'
 import {
   SubnetRegistrator,
   ToposCore,
   ToposMessaging,
-} from '@topos-protocol/topos-smart-contracts/typechain-types/contracts/topos-core'
+} from '@topos-protocol/topos-smart-contracts/typechain-types'
+import * as ToposCoreJSON from '@topos-protocol/topos-smart-contracts/artifacts/contracts/topos-core/ToposCore.sol/ToposCore.json'
+import * as ToposMessagingJSON from '@topos-protocol/topos-smart-contracts/artifacts/contracts/topos-core/ToposMessaging.sol/ToposMessaging.json'
+import * as SubnetRegistratorJSON from '@topos-protocol/topos-smart-contracts/artifacts/contracts/topos-core/SubnetRegistrator.sol/SubnetRegistrator.json'
 import { Job } from 'bull'
-import { Contract, ethers, providers } from 'ethers'
+import {
+  Contract,
+  getDefaultProvider,
+  InterfaceAbi,
+  Provider,
+  Wallet,
+} from 'ethers'
 
 import { getErrorMessage } from '../utils'
 import { ExecuteDto } from './execute.dto'
-import {
-  CONTRACT_ERRORS,
-  JOB_ERRORS,
-  PROVIDER_ERRORS,
-  WALLET_ERRORS,
-} from './execute.errors'
+import { CONTRACT_ERRORS, JOB_ERRORS, PROVIDER_ERRORS } from './execute.errors'
 import { TracingOptions } from './execute.service'
 
 const UNDEFINED_CERTIFICATE_ID =
@@ -91,6 +92,7 @@ export class ExecutionProcessorV1 {
 
           const provider = await this._createProvider(receivingSubnetEndpoint)
           this.logger.debug(`ReceivingSubnet: ${receivingSubnetEndpoint}`)
+
           span.addEvent('got provider', {
             provider: JSON.stringify(provider),
           })
@@ -102,14 +104,14 @@ export class ExecutionProcessorV1 {
             toposCoreProxyContractAddress,
             ToposCoreJSON.abi,
             wallet
-          )) as ToposCore
+          )) as unknown as ToposCore
 
           const messagingContract = (await this._getContract(
             provider,
             messagingContractAddress,
             ToposMessagingJSON.abi,
             wallet
-          )) as ToposMessaging
+          )) as unknown as ToposMessaging
 
           this.logger.debug(`Trie root: ${receiptTrieRoot}`)
 
@@ -169,11 +171,11 @@ export class ExecutionProcessorV1 {
 
     const provider = await this._createProvider(toposSubnetEndpoint)
 
-    const toposCoreContract = await this._getContract(
+    const toposCoreContract = (await this._getContract(
       provider,
       toposCoreContractAddress,
       ToposCoreJSON.abi
-    )
+    )) as unknown as ToposCore
 
     const toposSubnetId = await toposCoreContract.networkSubnetId()
 
@@ -184,7 +186,7 @@ export class ExecutionProcessorV1 {
         provider,
         subnetRegistratorContractAddress,
         SubnetRegistratorJSON.abi
-      )) as SubnetRegistrator
+      )) as unknown as SubnetRegistrator
 
       const receivingSubnet = await subnetRegistratorContract.subnets(subnetId)
       return receivingSubnet.endpointWs || receivingSubnet.endpointHttp
@@ -192,40 +194,33 @@ export class ExecutionProcessorV1 {
   }
 
   private _createProvider(endpoint: string) {
-    return new Promise<providers.WebSocketProvider | providers.JsonRpcProvider>(
-      (resolve, reject) => {
-        const url = new URL(endpoint)
-        const provider = url.protocol.startsWith('ws')
-          ? new providers.WebSocketProvider(endpoint)
-          : new providers.JsonRpcProvider(endpoint)
+    return new Promise<Provider>((resolve, reject) => {
+      const provider = getDefaultProvider(endpoint)
 
-        // Fix: Timeout to leave time to errors to be asynchronously caught
-        const timeoutId = setTimeout(() => {
-          resolve(provider)
-        }, 1000)
+      // Fix: Timeout to leave time to errors to be asynchronously caught
+      const timeoutId = setTimeout(() => {
+        resolve(provider)
+      }, 1000)
 
-        provider.on('debug', (data) => {
-          if (data.error) {
-            clearTimeout(timeoutId)
-            reject(new Error(PROVIDER_ERRORS.INVALID_ENDPOINT))
-          }
-        })
-      }
-    )
+      provider.on('debug', (data) => {
+        if (data.error) {
+          clearTimeout(timeoutId)
+          reject(new Error(PROVIDER_ERRORS.INVALID_ENDPOINT))
+        }
+      })
+    })
   }
 
-  private _createWallet(
-    provider: providers.WebSocketProvider | providers.JsonRpcProvider
-  ) {
+  private _createWallet(provider: Provider) {
     const privateKey = this.configService.getOrThrow('PRIVATE_KEY')
-    return new ethers.Wallet(privateKey, provider)
+    return new Wallet(privateKey, provider)
   }
 
   private async _getContract(
-    provider: providers.WebSocketProvider | providers.JsonRpcProvider,
+    provider: Provider,
     contractAddress: string,
-    contractInterface: ethers.ContractInterface,
-    wallet?: ethers.Wallet
+    contractInterfaceAbi: InterfaceAbi,
+    wallet?: Wallet
   ) {
     try {
       const code = await provider.getCode(contractAddress)
@@ -234,9 +229,9 @@ export class ExecutionProcessorV1 {
         throw new Error()
       }
 
-      return new ethers.Contract(
+      return new Contract(
         contractAddress,
-        contractInterface,
+        contractInterfaceAbi,
         wallet || provider
       )
     } catch (error) {

@@ -1,7 +1,12 @@
 import { ConfigService } from '@nestjs/config'
 import { Test, TestingModule } from '@nestjs/testing'
+import {
+  SubnetRegistrator__factory,
+  ToposCore__factory,
+  ToposMessaging__factory,
+} from '@topos-protocol/topos-smart-contracts/typechain-types'
 import { Job } from 'bull'
-import { ethers } from 'ethers'
+import * as ethers from 'ethers'
 import { EventEmitter } from 'stream'
 
 import { ExecuteDto } from './execute.dto'
@@ -81,7 +86,7 @@ describe('ExecuteProcessor', () => {
   describe('execute', () => {
     it('should go through if processed job is valid', async () => {
       const ethersProviderMock = jest
-        .spyOn<any, any>(ethers.providers, 'WebSocketProvider')
+        .spyOn<any, any>(ethers, 'getDefaultProvider')
         .mockReturnValue(providerMock)
 
       const ethersWalletMock = jest

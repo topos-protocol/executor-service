@@ -1,9 +1,9 @@
 import { InjectQueue } from '@nestjs/bull'
 import { Injectable, Logger, MessageEvent } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
-import { context, propagation, SpanStatusCode, trace } from '@opentelemetry/api'
+import { context, SpanStatusCode, trace } from '@opentelemetry/api'
 import { Queue } from 'bull'
-import { ethers } from 'ethers'
+import { isHexString } from 'ethers'
 import { Observable } from 'rxjs'
 
 import { ExecuteDto } from './execute.dto'
@@ -151,7 +151,7 @@ export class ExecuteServiceV1 {
   private _verifyPrivateKey() {
     const privateKey = this.configService.get<string>('PRIVATE_KEY')
 
-    if (!ethers.utils.isHexString(privateKey, 32)) {
+    if (!isHexString(privateKey, 32)) {
       throw new Error(WALLET_ERRORS.INVALID_PRIVATE_KEY)
     }
   }
