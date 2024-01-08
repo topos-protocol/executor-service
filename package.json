@@ -36,7 +36,7 @@
     "@opentelemetry/exporter-metrics-otlp-proto": "^0.44.0",
     "@opentelemetry/exporter-trace-otlp-proto": "^0.44.0",
     "@opentelemetry/sdk-node": "^0.44.0",
-    "@topos-protocol/topos-smart-contracts": "^3.1.0-rc1",
+    "@topos-protocol/topos-smart-contracts": "^3.1.0",
     "bcrypt": "^5.1.0",
     "bull": "^4.10.1",
     "class-transformer": "^0.5.1",
