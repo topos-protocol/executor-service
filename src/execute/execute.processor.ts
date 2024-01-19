@@ -245,7 +245,7 @@ export class ExecutionProcessorV1 {
   ) {
     let certId = UNDEFINED_CERTIFICATE_ID
     let i = 1
-    const maxTries = 40
+    const maxTries = 80
 
     while (certId == UNDEFINED_CERTIFICATE_ID && i < maxTries) {
       this.logger.debug(`Waiting for cert to be imported (${i})`)
