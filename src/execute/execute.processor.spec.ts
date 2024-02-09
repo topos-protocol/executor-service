@@ -41,10 +41,15 @@ const subnetMock = { endpointWs: 'ws://endpoint/ws' }
 const providerMock = Object.assign(new EventEmitter(), {
   getCode: jest.fn().mockResolvedValue('0x123'),
 })
-const walletMock = {}
-const transactionMock = { wait: jest.fn(() => Promise.resolve({})) }
+const transactionMock = {}
+const transactionResponseMock = { wait: jest.fn().mockResolvedValue({}) }
+const walletMock = {
+  sendTransaction: jest.fn().mockResolvedValue(transactionResponseMock),
+}
 const contractMock = {
-  execute: jest.fn().mockResolvedValue(transactionMock),
+  execute: {
+    populateTransaction: jest.fn().mockResolvedValue(transactionMock),
+  },
   networkSubnetId: jest.fn().mockResolvedValue(''),
   subnets: jest.fn().mockResolvedValue(subnetMock),
   receiptRootToCertId: jest.fn().mockResolvedValue(''),
@@ -112,7 +117,7 @@ describe('ExecuteProcessor', () => {
 
       expect(validExecuteJob.progress).toHaveBeenCalledWith(50)
 
-      expect(contractMock.execute).toHaveBeenCalledWith(
+      expect(contractMock.execute.populateTransaction).toHaveBeenCalledWith(
         validExecuteJob.data.logIndexes,
         validExecuteJob.data.receiptTrieRoot,
         validExecuteJob.data.receiptTrieMerkleProof,
@@ -120,6 +125,10 @@ describe('ExecuteProcessor', () => {
           gasLimit: 4_000_000,
         }
       )
+
+      expect(walletMock.sendTransaction).toHaveBeenCalledWith(transactionMock)
+      expect(transactionResponseMock.wait).toHaveBeenCalled()
+
       expect(validExecuteJob.progress).toHaveBeenCalledWith(100)
     })
   })

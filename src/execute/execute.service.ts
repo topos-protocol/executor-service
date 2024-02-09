@@ -7,7 +7,7 @@ import { isHexString } from 'ethers'
 import { Observable } from 'rxjs'
 
 import { ExecuteDto } from './execute.dto'
-import { QUEUE_ERRORS, WALLET_ERRORS } from './execute.errors'
+import { ExecuteProcessorErrorMessage, QUEUE_ERRORS } from './execute.errors'
 import { getErrorMessage } from '../utils'
 
 export interface TracingOptions {
@@ -33,8 +33,6 @@ export class ExecuteServiceV1 {
     // attached to a root trace, while the local tracing options can only be
     // used for the work of adding the job to the queue
     return this._tracer.startActiveSpan('execute', (span) => {
-      this.logger.debug(rootTracingOptions)
-
       return this._addExecutionJob(executeDto, rootTracingOptions)
         .then(({ id, timestamp }) => {
           span.setStatus({ code: SpanStatusCode.OK })
@@ -114,24 +112,23 @@ export class ExecuteServiceV1 {
                     progressListener
                   )
                   span.setStatus({ code: SpanStatusCode.OK })
+                  span.end()
                   subscriber.next({ data: { payload, type: 'completed' } })
                   subscriber.complete()
                 })
                 .catch((error) => {
-                  this.logger.debug(`Job failed!`)
-                  this.logger.debug(error)
-                  span.setStatus({ code: SpanStatusCode.ERROR, message: error })
-                  subscriber.error(error)
-                  subscriber.complete()
-                })
-                .finally(() => {
+                  const message = getErrorMessage(error)
+                  span.setStatus({ code: SpanStatusCode.ERROR, message })
                   span.end()
+                  subscriber.error(message)
+                  subscriber.complete()
                 })
             })
             .catch((error) => {
+              const message = getErrorMessage(error)
               this.logger.debug(`Job not found!`)
               this.logger.debug(error)
-              span.setStatus({ code: SpanStatusCode.ERROR, message: error })
+              span.setStatus({ code: SpanStatusCode.ERROR, message })
               span.end()
               subscriber.error(error)
               subscriber.complete()
@@ -152,7 +149,7 @@ export class ExecuteServiceV1 {
     const privateKey = this.configService.get<string>('PRIVATE_KEY')
 
     if (!isHexString(privateKey, 32)) {
-      throw new Error(WALLET_ERRORS.INVALID_PRIVATE_KEY)
+      throw new Error(ExecuteProcessorErrorMessage.WALLET_INVALID_PRIVATE_KEY)
     }
   }
 
