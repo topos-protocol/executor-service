@@ -29,7 +29,9 @@ import * as SubnetRegistratorJSON from '@topos-protocol/topos-smart-contracts/ar
 import { Job } from 'bull'
 import {
   Contract,
+  ContractTransaction,
   getDefaultProvider,
+  Interface,
   InterfaceAbi,
   Provider,
   Wallet,
@@ -37,7 +39,11 @@ import {
 
 import { getErrorMessage } from '../utils'
 import { ExecuteDto } from './execute.dto'
-import { CONTRACT_ERRORS, JOB_ERRORS, PROVIDER_ERRORS } from './execute.errors'
+import {
+  ExecuteError,
+  ExecuteProcessorError,
+  ExecuteTransactionError,
+} from './execute.errors'
 import { TracingOptions } from './execute.service'
 
 const UNDEFINED_CERTIFICATE_ID =
@@ -123,20 +129,26 @@ export class ExecutionProcessorV1 {
 
           await job.progress(50)
 
-          const tx = await messagingContract.execute(
+          const transaction = await this._createExecuteTransaction(
+            messagingContract,
             logIndexes,
             receiptTrieMerkleProof,
-            receiptTrieRoot,
-            {
-              gasLimit: 4_000_000,
-            }
+            receiptTrieRoot
           )
-          span.addEvent('got execute tx', {
-            tx: JSON.stringify(tx),
+
+          await this._catchToposMessagingExecuteTransactionError(
+            provider,
+            transaction
+          )
+
+          const transactionResponse = await wallet.sendTransaction(transaction)
+
+          span.addEvent('got execute transaction response', {
+            transaction: JSON.stringify(transactionResponse),
           })
 
-          const receipt = await tx.wait()
-          span.addEvent('got execute tx receipt', {
+          const receipt = await transactionResponse.wait()
+          span.addEvent('got execute transaction receipt', {
             receipt: JSON.stringify(receipt),
           })
 
@@ -151,7 +163,6 @@ export class ExecutionProcessorV1 {
             message,
           })
           span.end()
-          this.logger.debug('sync error', error)
           await job.moveToFailed({ message })
         }
       })
@@ -205,15 +216,21 @@ export class ExecutionProcessorV1 {
       provider.on('debug', (data) => {
         if (data.error) {
           clearTimeout(timeoutId)
-          reject(new Error(PROVIDER_ERRORS.INVALID_ENDPOINT))
+          reject(
+            new ExecuteError(ExecuteProcessorError.PROVIDER_INVALID_ENDPOINT)
+          )
         }
       })
     })
   }
 
   private _createWallet(provider: Provider) {
-    const privateKey = this.configService.getOrThrow('PRIVATE_KEY')
-    return new Wallet(privateKey, provider)
+    try {
+      const privateKey = this.configService.getOrThrow('PRIVATE_KEY')
+      return new Wallet(privateKey, provider)
+    } catch (error) {
+      throw new ExecuteError(ExecuteProcessorError.WALLET_INVALID_PRIVATE_KEY)
+    }
   }
 
   private async _getContract(
@@ -226,7 +243,7 @@ export class ExecutionProcessorV1 {
       const code = await provider.getCode(contractAddress)
 
       if (code === '0x') {
-        throw new Error()
+        throw new ExecuteError(ExecuteProcessorError.CONTRACT_INVALID_NO_CODE)
       }
 
       return new Contract(
@@ -235,7 +252,11 @@ export class ExecutionProcessorV1 {
         wallet || provider
       )
     } catch (error) {
-      throw new Error(CONTRACT_ERRORS.INVALID_CONTRACT)
+      if (error instanceof ExecuteError) {
+        throw error
+      }
+
+      throw new ExecuteError(ExecuteProcessorError.CONTRACT_INVALID_ADDRESS)
     }
   }
 
@@ -256,10 +277,56 @@ export class ExecutionProcessorV1 {
     }
 
     if (certId == UNDEFINED_CERTIFICATE_ID) {
-      throw new Error(JOB_ERRORS.MISSING_CERTIFICATE)
+      throw new ExecuteError(ExecuteProcessorError.CERTIFICATE_NOT_FOUND)
     }
 
     return certId
+  }
+
+  private _createExecuteTransaction(
+    messagingContract: ToposMessaging,
+    logIndexes: number[],
+    receiptTrieMerkleProof: string,
+    receiptTrieRoot: string
+  ) {
+    try {
+      return messagingContract.execute.populateTransaction(
+        logIndexes,
+        receiptTrieMerkleProof,
+        receiptTrieRoot,
+        {
+          gasLimit: 4_000_000,
+        }
+      )
+    } catch (error) {
+      throw new ExecuteError(
+        ExecuteProcessorError.EXECUTE_TRANSACTION_FAILED_INIT
+      )
+    }
+  }
+
+  private async _catchToposMessagingExecuteTransactionError(
+    provider: Provider,
+    transaction: ContractTransaction
+  ) {
+    try {
+      await provider.call(transaction)
+    } catch (error) {
+      if (error.data) {
+        const iface = new Interface(ToposMessagingJSON.abi)
+        const decodedError = iface.parseError(error.data)
+
+        const transactionError: ExecuteTransactionError = {
+          decoded: Boolean(decodedError),
+          data: decodedError?.name || error.data,
+        }
+
+        throw new ExecuteError(
+          ExecuteProcessorError.EXECUTE_TRANSACTION_REVERT,
+          JSON.stringify(transactionError)
+        )
+      }
+    }
   }
 
   @OnGlobalQueueError()
